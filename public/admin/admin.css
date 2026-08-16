@@ -402,3 +402,5 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
   border: none;
   background: none;
 }
+
+.md-preview del { text-decoration: line-through; color: var(--text-light); }

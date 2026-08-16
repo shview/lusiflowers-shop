@@ -44,6 +44,7 @@
 
     s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+    s = s.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
 
     // 还原占位符
     s = s.replace(/\x00(\d+)\x00/g, function (m, i) { return stash[+i] || ''; });
@@ -148,7 +149,7 @@
       .replace(/^\s*[-*]\s+/gm, '')            // 列表标记
       .replace(/^\s*\d+[.、]\s+/gm, '')        // 有序列表标记
       .replace(/^\s*>\s?/gm, '')               // 引用标记
-      .replace(/[*`>]+/g, '')
+      .replace(/[*`>~]+/g, '')
       .replace(/\s+/g, ' ')
       .trim();
     if (maxLen && s.length > maxLen) s = s.slice(0, maxLen) + '…';

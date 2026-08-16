@@ -324,6 +324,71 @@
     }).catch(function (err) { toast(err.message, true); });
   });
 
+  // ── 富文本(HTML) → Markdown 转换（粘贴用）──
+  function htmlToMarkdown(html) {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+
+    function inlineNodes(parent) {
+      var out = '';
+      parent.childNodes.forEach(function (ch) {
+        if (ch.nodeType === 3) { out += ch.textContent; return; }
+        if (ch.nodeType !== 1) return;
+        var tag = ch.tagName.toLowerCase();
+        if (tag === 'br') out += '\n';
+        else if (tag === 'strong' || tag === 'b') out += '**' + inlineNodes(ch).trim() + '**';
+        else if (tag === 'em' || tag === 'i') out += '*' + inlineNodes(ch).trim() + '*';
+        else if (tag === 'del' || tag === 's') out += '~~' + inlineNodes(ch).trim() + '~~';
+        else if (tag === 'code') out += '`' + ch.textContent + '`';
+        else if (tag === 'a') out += '[' + inlineNodes(ch).trim() + '](' + (ch.getAttribute('href') || '') + ')';
+        else if (tag === 'img') out += '![' + (ch.getAttribute('alt') || '') + '](' + (ch.getAttribute('src') || '') + ')';
+        else out += inlineNodes(ch);
+      });
+      return out;
+    }
+
+    var blocks = [];
+    doc.body.childNodes.forEach(function (node) {
+      if (node.nodeType === 3) {
+        var t = node.textContent.trim();
+        if (t) blocks.push(t);
+        return;
+      }
+      if (node.nodeType !== 1) return;
+      var tag = node.tagName.toLowerCase();
+      if (/^h[1-6]$/.test(tag)) {
+        blocks.push('#'.repeat(Number(tag[1])) + ' ' + inlineNodes(node).trim());
+      } else if (tag === 'p') {
+        var txt = inlineNodes(node).trim();
+        if (txt) blocks.push(txt);
+      } else if (tag === 'ul' || tag === 'ol') {
+        var items = [];
+        node.querySelectorAll(':scope > li').forEach(function (li, i) {
+          items.push((tag === 'ol' ? (i + 1) + '. ' : '- ') + inlineNodes(li).trim());
+        });
+        blocks.push(items.join('\n'));
+      } else if (tag === 'blockquote') {
+        var q = inlineNodes(node).trim();
+        if (q) blocks.push('> ' + q);
+      } else if (tag === 'pre') {
+        blocks.push('```\n' + node.textContent.replace(/\n+$/, '') + '\n```');
+      } else if (tag === 'hr') {
+        blocks.push('---');
+      } else if (tag === 'br') {
+        // 跳过
+      } else {
+        var rest = inlineNodes(node).trim();
+        if (rest) blocks.push(rest);
+      }
+    });
+
+    return blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').replace(/ {2,}/g, ' ').trim();
+  }
+
+  // 判断剪贴板 HTML 是否含可转换的富元素（纯包装 div 之类不拦默认粘贴）
+  htmlToMarkdown.looksRich = function (html) {
+    return /<(img|a\b|b\b|strong|i\b|em|h[1-6]\b|ul\b|ol\b|blockquote|pre)\b/i.test(html);
+  };
+
   // ── Markdown 描述编辑器 ───────────────
   var descEditor = {
     textarea: null,
@@ -370,11 +435,13 @@
         }
       });
 
-      // 粘贴上传
+      // 粘贴：图片文件 → 上传；富文本(HTML) → 转 Markdown；纯文本 → 原样
       ta.addEventListener('paste', function (e) {
-        var items = e.clipboardData && e.clipboardData.items;
-        if (!items) return;
+        var cd = e.clipboardData;
+        if (!cd) return;
+
         var files = [];
+        var items = cd.items || [];
         for (var i = 0; i < items.length; i++) {
           if (items[i].kind === 'file' && /^image\//.test(items[i].type)) {
             var f = items[i].getAsFile();
@@ -384,7 +451,18 @@
         if (files.length) {
           e.preventDefault();
           descEditor.uploadFiles(files);
+          return;
         }
+
+        var html = cd.getData && cd.getData('text/html');
+        if (html && htmlToMarkdown.looksRich(html)) {
+          var md = htmlToMarkdown(html);
+          if (md && md.trim()) {
+            e.preventDefault();
+            descEditor.insertAtCursor(md);
+          }
+        }
+        // 纯文本（含 Markdown 源码）走浏览器默认行为
       });
     },
 

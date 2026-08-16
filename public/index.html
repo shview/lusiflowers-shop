@@ -22,19 +22,13 @@
     <div class="nav-inner">
       <a class="nav-brand" href="/" id="site-name">商品展示</a>
       <div class="nav-right">
-        <a class="nav-link" href="/">购物</a>
-        <a class="nav-link" href="#announcement">公告</a>
+        <button class="nav-link" id="btn-announce" type="button" hidden>公告</button>
         <button class="nav-link theme-toggle" id="theme-toggle" type="button" aria-label="切换主题" title="主题：跟随系统（点击切换）">🌓</button>
       </div>
     </div>
   </nav>
 
   <main class="container">
-    <section class="announcement card" id="announcement" hidden>
-      <div class="announcement-title">公告</div>
-      <div class="announcement-body" id="announcement-body"></div>
-    </section>
-
     <section class="tabs" id="tabs"></section>
 
     <section class="products" id="products">
@@ -50,10 +44,10 @@
 
   <template id="tpl-product">
     <div class="product-card card">
-      <a class="product-link" target="_blank" rel="noopener">
+      <div class="product-link">
         <div class="product-thumb">
           <div class="soldout-tag" hidden>缺货</div>
-          <img loading="lazy" alt="">
+          <img loading="lazy" alt="" draggable="false">
           <div class="product-noimg" hidden>暂无图片</div>
         </div>
         <div class="product-info">
@@ -64,7 +58,7 @@
             <span class="product-buy">查看详情 →</span>
           </div>
         </div>
-      </a>
+      </div>
     </div>
   </template>
 
@@ -73,15 +67,45 @@
     <div class="detail card">
       <button class="detail-close" id="detail-close" type="button" aria-label="关闭">×</button>
       <div class="detail-body">
-        <div class="detail-thumb">
-          <img id="detail-img" alt="" hidden>
-          <div class="product-noimg" id="detail-noimg" hidden>暂无图片</div>
+        <div class="carousel" id="carousel" hidden>
+          <div class="carousel-stage">
+            <img id="carousel-img" alt="" draggable="false">
+            <div class="watermark-overlay" id="carousel-watermark" hidden></div>
+            <button class="carousel-nav prev" id="carousel-prev" type="button" aria-label="上一张">‹</button>
+            <button class="carousel-nav next" id="carousel-next" type="button" aria-label="下一张">›</button>
+            <div class="carousel-counter" id="carousel-counter"></div>
+          </div>
+          <div class="carousel-dots" id="carousel-dots"></div>
+        </div>
+        <div class="detail-thumb" id="detail-noimg-wrap">
+          <div class="product-noimg" id="detail-noimg">暂无图片</div>
         </div>
         <h2 class="detail-name" id="detail-name"></h2>
         <span class="detail-soldout" id="detail-soldout" hidden>缺货</span>
         <div class="detail-price" id="detail-price"></div>
         <div class="md-content" id="detail-desc"></div>
         <a class="btn-detail-link" id="detail-link" target="_blank" rel="noopener" hidden>了解详情 →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图片放大查看（灯箱） -->
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lightbox-close" id="lightbox-close" type="button" aria-label="关闭">×</button>
+    <button class="lightbox-nav prev" id="lightbox-prev" type="button" aria-label="上一张">‹</button>
+    <img id="lightbox-img" alt="" draggable="false">
+    <div class="watermark-overlay lightbox-watermark" id="lightbox-watermark" hidden></div>
+    <button class="lightbox-nav next" id="lightbox-next" type="button" aria-label="下一张">›</button>
+    <div class="lightbox-counter" id="lightbox-counter"></div>
+  </div>
+
+  <!-- 公告弹窗 -->
+  <div class="detail-mask" id="announcement-modal" hidden>
+    <div class="detail card announce-card">
+      <button class="detail-close" id="announce-close" type="button" aria-label="关闭">×</button>
+      <div class="announce-body">
+        <h2 class="announce-title">公告</h2>
+        <div class="md-content" id="announce-content"></div>
       </div>
     </div>
   </div>
