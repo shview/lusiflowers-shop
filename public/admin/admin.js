@@ -335,10 +335,33 @@
     $('#upload-hint').textContent = '支持 JPG/PNG/GIF/WebP，10MB 以内';
     updateImagePreview();
     resetDescEditor();
+    modalSnapshot = currentFormSnapshot();
     $('#product-modal').hidden = false;
   }
 
-  function closeProductModal() { $('#product-modal').hidden = true; }
+  // ── 未保存提醒：关闭前比对表单快照 ────
+  var modalSnapshot = '';
+
+  function currentFormSnapshot() {
+    return JSON.stringify({
+      name: $('#f-name').value,
+      cat: $('#f-category').value,
+      price: readPriceForm(),
+      desc: $('#f-description').value,
+      link: $('#f-link').value,
+      img: $('#f-image-url').value,
+      sort: $('#f-sort').value,
+      vis: $('#f-visible').checked,
+      so: $('#f-soldout').checked,
+    });
+  }
+
+  function closeProductModal(force) {
+    if (!force && currentFormSnapshot() !== modalSnapshot) {
+      if (!confirm('有未保存的修改，确定关闭吗？')) return;
+    }
+    $('#product-modal').hidden = true;
+  }
 
   $('#btn-new-product').addEventListener('click', function () { openProductModal(null); });
   $('#modal-close').addEventListener('click', closeProductModal);
@@ -368,7 +391,8 @@
 
     req.then(function () {
       toast('已保存');
-      closeProductModal();
+      modalSnapshot = currentFormSnapshot(); // 保存成功后再关，不触发提醒
+      closeProductModal(true);
       loadAll();
     }).catch(function (err) { toast(err.message, true); });
   });
@@ -805,6 +829,26 @@
       state.settings.site_name = $('#set-site-name').value.trim();
       $('#settings-hint').textContent = '已保存 ✓';
       setTimeout(function () { $('#settings-hint').textContent = ''; }, 2500);
+    }).catch(function (err) { toast(err.message, true); });
+  });
+
+  // ── 数据导出 ───────────────────────────
+  $('#btn-export').addEventListener('click', function () {
+    fetch('/api/export').then(function (res) {
+      if (!res.ok) throw new Error('导出失败（HTTP ' + res.status + '）');
+      return res.json();
+    }).then(function (data) {
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var a = document.createElement('a');
+      var d = new Date();
+      var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+      a.href = URL.createObjectURL(blob);
+      a.download = 'shop-backup-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate())
+        + '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast('已导出');
     }).catch(function (err) { toast(err.message, true); });
   });
 

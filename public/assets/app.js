@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var state = { categories: [], products: [], settings: {}, activeCategory: 'all' };
+  var state = { categories: [], products: [], settings: {}, activeCategory: 'all', query: '' };
 
   var $ = function (sel) { return document.querySelector(sel); };
 
@@ -47,7 +47,18 @@
   function renderTabs() {
     var tabs = $('#tabs');
     tabs.textContent = '';
-    var list = [{ id: 'all', name: '全部' }].concat(state.categories);
+    var counts = {};
+    var total = 0;
+    state.products.forEach(function (p) {
+      total++;
+      var k = String(p.category_id);
+      counts[k] = (counts[k] || 0) + 1;
+    });
+
+    var list = [{ id: 'all', name: '全部 (' + total + ')' }]
+      .concat(state.categories.map(function (c) {
+        return { id: c.id, name: c.name + ' (' + (counts[String(c.id)] || 0) + ')' };
+      }));
     list.forEach(function (cat) {
       var el = document.createElement('button');
       el.type = 'button';
@@ -78,9 +89,20 @@
     box.textContent = '';
 
     var categoryId = state.activeCategory;
-    var matched = state.products.filter(function (p) {
-      return categoryId === 'all' || String(p.category_id) === categoryId;
-    });
+    var matched;
+
+    if (state.query) {
+      // 搜索模式：忽略分类，按名称/描述即时过滤全部商品
+      var q = state.query.toLowerCase();
+      matched = state.products.filter(function (p) {
+        var hay = (p.name || '') + '\n' + (p.description || '');
+        return hay.toLowerCase().indexOf(q) !== -1;
+      });
+    } else {
+      matched = state.products.filter(function (p) {
+        return categoryId === 'all' || String(p.category_id) === categoryId;
+      });
+    }
     // 缺货商品排到该视图最后
     var list = matched.filter(function (p) { return !p.sold_out; })
       .concat(matched.filter(function (p) { return !!p.sold_out; }));
@@ -88,7 +110,7 @@
     if (!list.length) {
       var empty = document.createElement('div');
       empty.className = 'empty';
-      empty.textContent = '这里还没有商品';
+      empty.textContent = state.query ? '没有找到相关商品' : '这里还没有商品';
       box.appendChild(empty);
       return;
     }
@@ -345,6 +367,36 @@
     if (e.target && e.target.tagName === 'IMG' &&
         (e.target.closest('.carousel-stage') || e.target.closest('#lightbox') || e.target.closest('.md-content'))) {
       e.preventDefault();
+    }
+  });
+
+  // ── 搜索框（点图标展开）─────────────────
+  var searchbar = $('#searchbar');
+  var searchInput = $('#search-input');
+
+  $('#btn-search').addEventListener('click', function () {
+    searchbar.hidden = !searchbar.hidden;
+    if (!searchbar.hidden) searchInput.focus();
+  });
+
+  searchInput.addEventListener('input', function () {
+    state.query = this.value.trim();
+    renderProducts();
+  });
+
+  $('#search-clear').addEventListener('click', function () {
+    searchInput.value = '';
+    state.query = '';
+    renderProducts();
+    searchInput.focus();
+  });
+
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      searchInput.value = '';
+      state.query = '';
+      searchbar.hidden = true;
+      renderProducts();
     }
   });
 

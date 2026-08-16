@@ -541,3 +541,12 @@ main.container { flex: 1; padding-top: 20px; padding-bottom: 40px; }
 .md-content img { cursor: zoom-in; }
 
 .md-content del { text-decoration: line-through; color: var(--text-light); }
+
+/* ── 搜索栏 ───────────────────────────── */
+.searchbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.searchbar .input { flex: 1; }

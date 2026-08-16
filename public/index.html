@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>商品展示</title>
-  <meta name="description" content="">
-  <link rel="icon" href="data:,">
+  <title>__OG_TITLE__</title>
+  <meta name="description" content="__OG_DESC__">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="__OG_TITLE__">
+  <meta property="og:description" content="__OG_DESC__">
+  <meta property="og:image" content="__OG_IMAGE__">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <script>
     // 防主题闪烁：渲染前应用已保存的偏好
     (function () {
@@ -15,7 +19,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/assets/style.css?v=7">
+  <link rel="stylesheet" href="/assets/style.css?v=8">
 </head>
 <body>
   <nav class="nav">
@@ -23,12 +27,18 @@
       <a class="nav-brand" href="/" id="site-name">商品展示</a>
       <div class="nav-right">
         <button class="nav-link" id="btn-announce" type="button" hidden>公告</button>
+        <button class="nav-link" id="btn-search" type="button" aria-label="搜索" title="搜索商品">🔍</button>
         <button class="nav-link theme-toggle" id="theme-toggle" type="button" aria-label="切换主题" title="主题：跟随系统（点击切换）">🌓</button>
       </div>
     </div>
   </nav>
 
   <main class="container">
+    <div class="searchbar" id="searchbar" hidden>
+      <input type="search" id="search-input" class="input" placeholder="输入商品名称，即时过滤…" autocomplete="off">
+      <button class="btn" id="search-clear" type="button" aria-label="清空">×</button>
+    </div>
+
     <section class="tabs" id="tabs"></section>
 
     <section class="products" id="products">
@@ -110,7 +120,7 @@
     </div>
   </div>
 
-  <script src="/assets/md.js?v=7"></script>
-  <script src="/assets/app.js?v=7"></script>
+  <script src="/assets/md.js?v=8"></script>
+  <script src="/assets/app.js?v=8"></script>
 </body>
 </html>
