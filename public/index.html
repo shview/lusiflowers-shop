@@ -19,7 +19,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/assets/style.css?v=12">
+  <link rel="stylesheet" href="/assets/style.css?v=13">
 </head>
 <body>
   <nav class="nav">
@@ -35,8 +35,9 @@
 
   <main class="container">
     <div class="searchbar" id="searchbar" hidden>
-      <input type="search" id="search-input" class="input" placeholder="输入商品名称，即时过滤…" autocomplete="off">
-      <button class="btn" id="search-clear" type="button" aria-label="清空">×</button>
+      <span class="searchbar-icon" aria-hidden="true">🔍</span>
+      <input type="search" id="search-input" class="input" placeholder="搜索商品名称或描述…" autocomplete="off">
+      <button class="searchbar-clear" id="search-clear" type="button" aria-label="清空">×</button>
     </div>
 
     <div class="list-tools">
@@ -153,7 +154,7 @@
     <div class="contact-text" id="contact-text"></div>
     <a id="contact-link" class="btn-detail-link" target="_blank" rel="noopener" hidden></a>
   </div>
-<script src="/assets/md.js?v=12"></script>
-  <script src="/assets/app.js?v=12"></script>
+<script src="/assets/md.js?v=13"></script>
+  <script src="/assets/app.js?v=13"></script>
 </body>
 </html>

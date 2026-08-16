@@ -445,3 +445,10 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
 .prow.dragging { opacity: 0.45; }
 
 .pane-head-ops { display: flex; gap: 8px; align-items: center; }
+
+/* 拖拽放置区通用高亮 */
+.upload-row.dragover {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+  border-radius: 10px;
+}

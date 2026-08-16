@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=12">
+  <link rel="stylesheet" href="/admin/admin.css?v=13">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -91,7 +91,7 @@
           </label>
           <div class="field">
             <span class="field-label">网站图标（浏览器标签页小图标）</span>
-            <div class="upload-row">
+            <div class="upload-row" id="favicon-row">
               <img id="favicon-preview" class="favicon-preview" alt="图标预览" src="/favicon.svg">
               <div class="upload-ops">
                 <input type="file" id="favicon-file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif,image/svg+xml" hidden>
@@ -121,7 +121,7 @@
           <div class="field">
             <span class="field-label">联系浮窗（前台右下角咨询按钮）</span>
             <label class="check-field"><input type="checkbox" id="set-contact-on"><span>开启浮窗</span></label>
-            <div class="upload-row" style="margin-top:8px">
+            <div class="upload-row" id="contact-qr-row" style="margin-top:8px">
               <img id="contact-qr-preview" class="favicon-preview" alt="" hidden>
               <div class="upload-ops">
                 <input type="file" id="contact-qr-file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" hidden>
@@ -246,7 +246,7 @@
         </label>
         <div class="field">
           <span class="field-label">商品图片</span>
-          <div class="upload-row">
+          <div class="upload-row" id="main-image-row">
             <div class="upload-preview" id="f-image-preview">无图片</div>
             <div class="upload-ops">
               <input type="file" id="f-image-file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" hidden>
@@ -280,7 +280,7 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="/assets/md.js?v=12"></script>
-  <script src="/admin/admin.js?v=12"></script>
+  <script src="/assets/md.js?v=13"></script>
+  <script src="/admin/admin.js?v=13"></script>
 </body>
 </html>

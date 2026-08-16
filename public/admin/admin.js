@@ -893,30 +893,46 @@
     this.value = '';
   });
 
-  // 拖拽上传：整个预览行作为放置区
-  (function () {
-    var zone = document.querySelector('.upload-row');
-    if (!zone) return;
+  // 通用拖拽放置区绑定
+  function bindDropZone(el, onFile) {
+    if (!el) return;
     ['dragenter', 'dragover'].forEach(function (ev) {
-      zone.addEventListener(ev, function (e) {
+      el.addEventListener(ev, function (e) {
         e.preventDefault();
         e.stopPropagation();
-        zone.classList.add('dragover');
+        el.classList.add('dragover');
       });
     });
     ['dragleave', 'drop'].forEach(function (ev) {
-      zone.addEventListener(ev, function (e) {
+      el.addEventListener(ev, function (e) {
         e.preventDefault();
         e.stopPropagation();
-        zone.classList.remove('dragover');
+        el.classList.remove('dragover');
       });
     });
-    zone.addEventListener('drop', function (e) {
-      if (e.dataTransfer && e.dataTransfer.files.length) {
-        uploadMainImage(e.dataTransfer.files[0]);
-      }
+    el.addEventListener('drop', function (e) {
+      if (e.dataTransfer && e.dataTransfer.files.length) onFile(e.dataTransfer.files[0]);
     });
-  })();
+  }
+
+  // 三个上传区都支持拖拽：商品主图 / 网站图标 / 联系二维码
+  bindDropZone($('#main-image-row'), uploadMainImage);
+  bindDropZone($('#favicon-row'), function (file) {
+    if (!file || !/^image\//.test(file.type)) return;
+    uploadRaw(file).then(function (data) {
+      faviconPending = data.url;
+      updateFaviconPreview(data.url);
+      toast('图标已上传，记得点「保存设置」生效');
+    }).catch(function (err) { toast(err.message, true); });
+  });
+  bindDropZone($('#contact-qr-row'), function (file) {
+    if (!file || !/^image\//.test(file.type)) return;
+    uploadRaw(file).then(function (data) {
+      contactQrPending = data.url;
+      updateContactQrPreview(data.url);
+      toast('二维码已上传，记得点「保存设置」生效');
+    }).catch(function (err) { toast(err.message, true); });
+  });
 
   $('#btn-remove-image').addEventListener('click', function () {
     $('#f-image-url').value = '';
@@ -1032,6 +1048,13 @@
   // ── 网站图标上传（不加水印，直接原图存储）──
   var faviconPending = null; // null=未改动；''=恢复默认；其他=新图标 URL
 
+  // 原图直传（图标/二维码等不加水印的图片）
+  function uploadRaw(file) {
+    var form = new FormData();
+    form.append('file', file);
+    return api('POST', '/api/upload', form, true);
+  }
+
   function updateFaviconPreview(url) {
     $('#favicon-preview').src = url || '/favicon.svg';
   }
@@ -1042,9 +1065,7 @@
     var file = this.files[0];
     this.value = '';
     if (!file || !/^image\//.test(file.type)) return;
-    var form = new FormData();
-    form.append('file', file);
-    api('POST', '/api/upload', form, true).then(function (data) {
+    uploadRaw(file).then(function (data) {
       faviconPending = data.url;
       updateFaviconPreview(data.url);
       toast('图标已上传，记得点「保存设置」生效');
@@ -1072,9 +1093,7 @@
     var file = this.files[0];
     this.value = '';
     if (!file || !/^image\//.test(file.type)) return;
-    var form = new FormData();
-    form.append('file', file);
-    api('POST', '/api/upload', form, true).then(function (data) {
+    uploadRaw(file).then(function (data) {
       contactQrPending = data.url;
       updateContactQrPreview(data.url);
       toast('二维码已上传，记得点「保存设置」生效');

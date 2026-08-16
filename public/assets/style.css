@@ -534,14 +534,59 @@ main.container { flex: 1; padding-top: 20px; padding-bottom: 40px; }
 
 .md-content del { text-decoration: line-through; color: var(--text-light); }
 
-/* ── 搜索栏 ───────────────────────────── */
+/* ── 搜索栏（胶囊式）──────────────────── */
 .searchbar {
-  display: flex;
-  gap: 8px;
+  position: relative;
   margin-bottom: 16px;
 }
 
-.searchbar .input { flex: 1; }
+.searchbar .input {
+  width: 100%;
+  padding: 9px 44px 9px 40px;
+  border-radius: 999px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+}
+
+.searchbar .input:focus {
+  box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.18);
+  border-color: var(--accent);
+}
+
+.searchbar-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.searchbar-clear {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--thumb-bg);
+  color: var(--text-light);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchbar-clear:hover { background: var(--accent); color: #fff; }
+
+.searchbar input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
 
 /* ── 访问密码锁屏 ─────────────────────── */
 .view-lock {
