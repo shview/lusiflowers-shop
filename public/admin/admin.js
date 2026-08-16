@@ -13,6 +13,16 @@
     });
   }
 
+  // 容器级兜底：行间隙/列表边缘的拖放与拖拽结束，任何情况下都清理指示线
+  function bindListDragFallback() {
+    var list = $('#product-list');
+    if (!list || list.dataset.dragBound) return;
+    list.dataset.dragBound = '1';
+    list.addEventListener('dragover', function (e) { e.preventDefault(); });
+    list.addEventListener('drop', function (e) { e.preventDefault(); clearDragHints(); });
+    list.addEventListener('dragend', function () { clearDragHints(); });
+  }
+
   // 按 DOM 顺序重写全部商品的 sort（拖拽排序保存）
   function saveOrderFromDom() {
     var rows = document.querySelectorAll('#product-list .prow');
@@ -153,6 +163,7 @@
   function renderProductList() {
     var box = $('#product-list');
     box.textContent = '';
+    bindListDragFallback();
 
     if (!state.products.length) {
       var empty = document.createElement('div');
@@ -537,8 +548,8 @@
     return /<(img|a\b|b\b|strong|i\b|em|h[1-6]\b|ul\b|ol\b|blockquote|pre)\b/i.test(html);
   };
 
-  // ── 图片上传统一入口（按设置决定是否合成水印）──
-  // 浏览器端把站名水印烧进像素，作为展示图上传；原图以 orig 字段一并提交另存私有前缀
+  // ── 图片上传统一入口（按设置决定压缩与水印）──
+  // 流程：原图 → [压缩到 1500px]（展示用）→ [烧入站名水印] → 上传展示图 +（可选）原图另存
   function compositeWatermark(file, text) {
     return new Promise(function (resolve, reject) {
       var url = URL.createObjectURL(file);
@@ -577,16 +588,59 @@
     });
   }
 
+  function compressImage(file, maxDim) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var w = img.naturalWidth, h = img.naturalHeight;
+          var m = Math.max(w, h);
+          if (m <= maxDim) { URL.revokeObjectURL(url); resolve(null); return; } // 无需压缩
+          var scale = maxDim / m;
+          var c = document.createElement('canvas');
+          c.width = Math.round(w * scale);
+          c.height = Math.round(h * scale);
+          var ctx = c.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          URL.revokeObjectURL(url);
+          c.toBlob(function (blob) {
+            resolve(blob && blob.size ? blob : null);
+          }, 'image/jpeg', 0.9);
+        } catch (e) { reject(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('图片读取失败')); };
+      img.src = url;
+    });
+  }
+
   async function uploadImage(file) {
     var wmOn = state.settings.watermark_on !== '0';
+    var cpOn = state.settings.compress_on === '1';
     var text = (state.settings.site_name || '').trim() || 'lusiflowers';
+    var displayFile = file;
 
-    if (wmOn && /^image\/(jpeg|png|webp|avif)$/.test(file.type)) {
+    // 自动压图：大图缩到 1500px 内（仅影响展示图，原图另存不受影响）
+    if (cpOn && /^image\/(jpeg|png|webp|avif)$/.test(file.type)) {
       try {
-        var blob = await compositeWatermark(file, text);
+        var compressed = await compressImage(file, 1500);
+        if (compressed) {
+          displayFile = new File([compressed], 'c.jpg', { type: 'image/jpeg' });
+        }
+      } catch (e) {
+        console.error('压缩失败，使用原图', e);
+      }
+    }
+
+    if (wmOn && /^image\/(jpeg|png|webp|avif)$/.test(displayFile.type)) {
+      try {
+        var blob = await compositeWatermark(displayFile, text);
         if (blob) {
           var form = new FormData();
           form.append('file', new File([blob], 'wm.jpg', { type: 'image/jpeg' }));
+          // 原图：水印开启时始终另存完整原图（含未压缩版本）
           form.append('orig', file, file.name || 'orig');
           return api('POST', '/api/upload', form, true);
         }
@@ -596,7 +650,7 @@
     }
 
     var form = new FormData();
-    form.append('file', file);
+    form.append('file', displayFile);
     return api('POST', '/api/upload', form, true);
   }
 
@@ -913,6 +967,7 @@
     $('#set-home-title').value = settings.home_title || '';
     $('#set-announcement').value = settings.announcement || '';
     $('#set-watermark').checked = settings.watermark_on !== '0';
+    $('#set-compress').checked = settings.compress_on === '1';
     $('#set-og').checked = settings.og_on === '1';
     $('#set-view-protect').checked = settings.view_protect === '1';
     $('#set-view-password').value = settings.view_password || '';
@@ -959,6 +1014,7 @@
       favicon_url: faviconUrl,
       announcement: $('#set-announcement').value,
       watermark_on: $('#set-watermark').checked ? '1' : '0',
+      compress_on: $('#set-compress').checked ? '1' : '0',
       og_on: $('#set-og').checked ? '1' : '0',
       view_protect: $('#set-view-protect').checked ? '1' : '0',
       view_password: $('#set-view-password').value.trim(),
@@ -966,6 +1022,7 @@
     }).then(function () {
       // 同步到本会话状态，立即影响后续上传
       state.settings.watermark_on = $('#set-watermark').checked ? '1' : '0';
+      state.settings.compress_on = $('#set-compress').checked ? '1' : '0';
       state.settings.site_name = $('#set-site-name').value.trim();
       state.settings.home_title = $('#set-home-title').value.trim();
       state.settings.favicon_url = faviconUrl;

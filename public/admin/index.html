@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=9">
+  <link rel="stylesheet" href="/admin/admin.css?v=10">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -103,6 +103,10 @@
           <label class="field check-field">
             <input type="checkbox" id="set-watermark" checked>
             <span>图片水印：上传时把站名水印烧入图片（原图另存不公开；关闭后仅新上传的图不再加水印）</span>
+          </label>
+          <label class="field check-field">
+            <input type="checkbox" id="set-compress">
+            <span>上传自动压图：大图自动缩到 1500px 内再上传（前台加载更快、更省空间；水印开启时完整原图仍会另存）</span>
           </label>
           <label class="field check-field">
             <input type="checkbox" id="set-og">
@@ -249,7 +253,7 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="/assets/md.js?v=9"></script>
-  <script src="/admin/admin.js?v=9"></script>
+  <script src="/assets/md.js?v=10"></script>
+  <script src="/admin/admin.js?v=10"></script>
 </body>
 </html>
