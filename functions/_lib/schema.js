@@ -3,17 +3,24 @@
 // 其他错误（如表还不存在）下次请求重试。
 let migrated = false;
 
+const COLUMNS = [
+  `ALTER TABLE products ADD COLUMN sold_out INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE products ADD COLUMN views INTEGER NOT NULL DEFAULT 0`,
+];
+
 export async function ensureSchema(env) {
   if (migrated || !env.DB) return;
   try {
-    await env.DB.prepare(`ALTER TABLE products ADD COLUMN sold_out INTEGER NOT NULL DEFAULT 0`).run();
+    for (const sql of COLUMNS) {
+      try {
+        await env.DB.prepare(sql).run();
+      } catch (e) {
+        const msg = String(e.message || '');
+        if (!msg.includes('duplicate column')) throw e;
+      }
+    }
     migrated = true;
   } catch (e) {
-    const msg = String(e.message || '');
-    if (msg.includes('duplicate column')) {
-      migrated = true; // 已迁移过
-    } else {
-      console.error('schema migration retry later:', msg);
-    }
+    console.error('schema migration retry later:', e.message);
   }
 }

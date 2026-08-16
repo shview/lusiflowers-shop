@@ -9,7 +9,7 @@ export async function onRequestGet(context) {
   const includeHidden = url.searchParams.get('all') === '1' && (await isAuthed(env, request));
 
   let sql = `
-    SELECT p.id, p.name, p.category_id, p.price, p.description, p.image_url, p.link, p.sort, p.visible, p.sold_out, p.created_at,
+    SELECT p.id, p.name, p.category_id, p.price, p.description, p.image_url, p.link, p.sort, p.visible, p.sold_out, p.views, p.created_at,
            c.name AS category_name
     FROM products p LEFT JOIN categories c ON c.id = p.category_id
     WHERE 1=1`;

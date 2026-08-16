@@ -120,7 +120,18 @@
     </div>
   </div>
 
-  <script src="/assets/md.js?v=9"></script>
+    <!-- 访问密码锁屏（开启整站保护时显示） -->
+  <div class="view-lock" id="view-lock" hidden>
+    <form class="view-lock-card card" id="view-lock-form">
+      <div class="view-lock-icon">🔒</div>
+      <h2 class="view-lock-title">本站已开启访问密码</h2>
+      <p class="view-lock-desc">请输入访问码查看内容</p>
+      <input type="password" id="view-lock-input" class="input" placeholder="访问码" autocomplete="off" required>
+      <button type="submit" class="btn-detail-link" style="border:none;cursor:pointer">进入</button>
+      <div class="view-lock-error" id="view-lock-error"></div>
+    </form>
+  </div>
+<script src="/assets/md.js?v=9"></script>
   <script src="/assets/app.js?v=9"></script>
 </body>
 </html>

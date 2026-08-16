@@ -550,3 +550,30 @@ main.container { flex: 1; padding-top: 20px; padding-bottom: 40px; }
 }
 
 .searchbar .input { flex: 1; }
+
+/* ── 访问密码锁屏 ─────────────────────── */
+.view-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.view-lock-card {
+  width: 360px;
+  max-width: 100%;
+  padding: 32px 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.view-lock-icon { font-size: 40px; line-height: 1; }
+.view-lock-title { margin: 0; font-size: 18px; }
+.view-lock-desc { margin: 0; color: var(--text-light); font-size: 13px; }
+.view-lock-error { color: var(--accent); font-size: 13px; min-height: 18px; }

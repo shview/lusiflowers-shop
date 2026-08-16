@@ -108,6 +108,29 @@
             <input type="checkbox" id="set-og">
             <span>分享卡片（Open Graph）：在微信/QQ 分享链接时显示标题、简介与缩略图</span>
           </label>
+
+          <div class="field">
+            <span class="field-label">访问控制（公开前预览用）</span>
+            <label class="check-field"><input type="checkbox" id="set-view-protect"><span>开启整站访问密码</span></label>
+            <div class="field-row" style="margin-top:8px">
+              <label class="field">
+                <span class="field-label">基础口令（仅管理员可见）</span>
+                <input type="text" id="set-view-password" class="input" placeholder="设置一个基础口令">
+              </label>
+              <label class="field">
+                <span class="field-label">自动更换</span>
+                <select id="set-view-hours" class="input">
+                  <option value="0">不自动（固定访问码）</option>
+                  <option value="1">每 1 小时</option>
+                  <option value="6">每 6 小时</option>
+                  <option value="24">每 24 小时</option>
+                  <option value="72">每 72 小时</option>
+                </select>
+              </label>
+            </div>
+            <div class="upload-hint" id="view-code-info">当前访问码：—</div>
+          </div>
+
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">保存设置</button>
             <span class="save-hint" id="settings-hint"></span>

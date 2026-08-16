@@ -212,6 +212,9 @@
   }
 
   function openDetail(p) {
+    // 浏览计数（fire-and-forget，不阻塞展示）
+    fetch('/api/products/' + p.id + '/view', { method: 'POST' }).catch(function () {});
+
     carousel.images = collectImages(p);
     carousel.index = 0;
     renderCarousel();
@@ -431,6 +434,26 @@
   });
   applyTheme(currentTheme());
 
+  // ── 访问密码锁屏 ───────────────────────
+  function showViewLock() {
+    $('#view-lock').hidden = false;
+    $('#view-lock-input').focus();
+  }
+
+  $('#view-lock-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var errEl = $('#view-lock-error');
+    errEl.textContent = '';
+    fetch('/api/view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: $('#view-lock-input').value }),
+    }).then(function (res) {
+      if (res.ok) { location.reload(); return null; }
+      return res.json().then(function (d) { throw new Error(d.error || '访问码不正确'); });
+    }).catch(function (err) { errEl.textContent = err.message; });
+  });
+
   function load() {
     Promise.all([
       fetchJSON('/api/settings'),
@@ -446,6 +469,8 @@
       maybeAutoShowAnnouncement();
     }).catch(function (err) {
       console.error(err);
+      // 整站访问密码：数据接口返回 401 时显示锁屏
+      if (err && /401/.test(err.message)) { showViewLock(); return; }
       var box = $('#products');
       box.textContent = '';
       var el = document.createElement('div');

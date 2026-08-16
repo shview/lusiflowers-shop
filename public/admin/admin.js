@@ -3,6 +3,22 @@
   'use strict';
 
   var state = { categories: [], products: [], settings: {} };
+  var dragRow = null;
+
+  // 按 DOM 顺序重写全部商品的 sort（拖拽排序保存）
+  function saveOrderFromDom() {
+    var rows = document.querySelectorAll('#product-list .prow');
+    var jobs = [];
+    rows.forEach(function (r, i) {
+      var id = Number(r.dataset.id);
+      var old = state.products.find(function (p) { return p.id === id; });
+      if (old && old.sort !== i) jobs.push(api('PUT', '/api/products/' + id, { sort: i }));
+    });
+    if (!jobs.length) return;
+    Promise.all(jobs)
+      .then(function () { toast('顺序已保存'); loadAll(); })
+      .catch(function (err) { toast(err.message, true); loadAll(); });
+  }
 
   var $ = function (sel) { return document.querySelector(sel); };
 
@@ -176,7 +192,10 @@
       var meta = document.createElement('div');
       meta.className = 'prow-meta';
       var catName = p.category_name || '未分类';
-      meta.textContent = catName + (p.price ? ' · ' + p.price : '') + ' · 排序 ' + p.sort;
+      meta.textContent = catName + (p.price ? ' · ' + p.price : '') + ' · 排序 ' + p.sort
+        + (p.views ? ' · 浏览 ' + p.views : '');
+      row.draggable = true;
+      row.dataset.id = p.id;
       main.appendChild(name);
       main.appendChild(meta);
       row.appendChild(main);
@@ -205,6 +224,22 @@
           .then(loadAll)
           .catch(function (err) { toast(err.message, true); });
       });
+      opBtn('复制', function () {
+        api('POST', '/api/products', {
+          name: p.name + '（副本）',
+          category_id: p.category_id,
+          price: p.price,
+          description: p.description,
+          image_url: p.image_url,
+          link: p.link,
+          sort: p.sort,
+          visible: false,
+          sold_out: false,
+        }).then(function () {
+          toast('已复制为「' + p.name + '（副本）」，默认隐藏，编辑后显示');
+          loadAll();
+        }).catch(function (err) { toast(err.message, true); });
+      });
       opBtn('编辑', function () { openProductModal(p); });
       opBtn('删除', function () {
         if (!confirm('确定删除商品「' + p.name + '」吗？此操作不可恢复。')) return;
@@ -214,6 +249,48 @@
       });
 
       row.appendChild(ops);
+
+      // 拖拽排序：拖到目标行上/下半区决定插前/插后，松手按新顺序重写 sort
+      row.addEventListener('dragstart', function (e) {
+        dragRow = row;
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', p.id); } catch (err) { /* IE 兼容 */ }
+      });
+      row.addEventListener('dragend', function () {
+        row.classList.remove('dragging');
+        box.querySelectorAll('.prow').forEach(function (r) { r.classList.remove('drop-hint'); });
+      });
+      row.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        var rect = row.getBoundingClientRect();
+        var before = e.clientY < rect.top + rect.height / 2;
+        row.classList.toggle('drop-hint', true);
+        row.style.borderTop = before ? '2px solid var(--accent)' : '';
+        row.style.borderBottom = before ? '' : '2px solid var(--accent)';
+      });
+      row.addEventListener('dragleave', function () {
+        row.style.borderTop = '';
+        row.style.borderBottom = '';
+      });
+      row.addEventListener('drop', function (e) {
+        e.preventDefault();
+        if (!dragRow || dragRow === row) { resetBorders(); return; }
+        var rect = row.getBoundingClientRect();
+        var before = e.clientY < rect.top + rect.height / 2;
+        box.insertBefore(dragRow, before ? row : row.nextSibling);
+        resetBorders();
+        saveOrderFromDom();
+      });
+      function resetBorders() {
+        box.querySelectorAll('.prow').forEach(function (r) {
+          r.style.borderTop = '';
+          r.style.borderBottom = '';
+          r.classList.remove('drop-hint');
+        });
+      }
+
       box.appendChild(row);
     });
   }
@@ -811,12 +888,38 @@
   });
 
   // ── 站点设置 ───────────────────────────
+  // 访问码展示（来自登录后 /api/settings 的 _view 字段）
+  function updateViewCodeInfo(settings) {
+    var el = $('#view-code-info');
+    var v = settings && settings._view;
+    if (!v || !v.code) { el.textContent = '当前访问码：—（填写基础口令并保存后生成）'; return; }
+    var h = Number(settings.view_pw_hours) || 0;
+    var txt = '当前访问码：' + v.code + '（发给访客即可，区分大小写）';
+    if (v.next_rotate_at) {
+      var mins = Math.max(1, Math.round((v.next_rotate_at - Date.now()) / 60000));
+      txt += '，' + (mins >= 60 ? Math.round(mins / 60) + ' 小时' : mins + ' 分钟') + '后自动更换';
+    } else {
+      txt += '，固定不变';
+    }
+    el.textContent = txt;
+  }
+
+  $('#set-view-hours').addEventListener('change', function () {
+    // 轮换周期变化后访问码即时变化，保存后更新展示
+    var base = $('#set-view-password').value.trim();
+    if (!base) return;
+  });
+
   function fillSettingsForm(settings) {
     $('#set-site-name').value = settings.site_name || '';
     $('#set-home-title').value = settings.home_title || '';
     $('#set-announcement').value = settings.announcement || '';
     $('#set-watermark').checked = settings.watermark_on !== '0';
     $('#set-og').checked = settings.og_on === '1';
+    $('#set-view-protect').checked = settings.view_protect === '1';
+    $('#set-view-password').value = settings.view_password || '';
+    $('#set-view-hours').value = String(settings.view_pw_hours || '0');
+    updateViewCodeInfo(settings);
     faviconPending = null;
     updateFaviconPreview(settings.favicon_url || '');
   }
@@ -859,6 +962,9 @@
       announcement: $('#set-announcement').value,
       watermark_on: $('#set-watermark').checked ? '1' : '0',
       og_on: $('#set-og').checked ? '1' : '0',
+      view_protect: $('#set-view-protect').checked ? '1' : '0',
+      view_password: $('#set-view-password').value.trim(),
+      view_pw_hours: String($('#set-view-hours').value || '0'),
     }).then(function () {
       // 同步到本会话状态，立即影响后续上传
       state.settings.watermark_on = $('#set-watermark').checked ? '1' : '0';
@@ -866,6 +972,11 @@
       state.settings.home_title = $('#set-home-title').value.trim();
       state.settings.favicon_url = faviconUrl;
       faviconPending = null;
+      // 重新拉取以显示最新访问码
+      api('GET', '/api/settings').then(function (r) {
+        state.settings = r.settings || state.settings;
+        updateViewCodeInfo(state.settings);
+      }).catch(function () {});
       $('#settings-hint').textContent = '已保存 ✓';
       setTimeout(function () { $('#settings-hint').textContent = ''; }, 2500);
     }).catch(function (err) { toast(err.message, true); });

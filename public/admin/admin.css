@@ -438,3 +438,8 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
   background: var(--card-bg);
   flex-shrink: 0;
 }
+
+/* ── 拖拽排序 ─────────────────────────── */
+.prow { cursor: grab; }
+.prow:active { cursor: grabbing; }
+.prow.dragging { opacity: 0.45; }
