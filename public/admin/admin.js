@@ -74,6 +74,30 @@
     api('POST', '/api/logout').then(showLogin).catch(function () {});
   });
 
+  // ── 主题切换（自动 → 亮 → 暗 循环）────
+  var themeBtn = $('#theme-toggle');
+  var THEME_ORDER = ['auto', 'light', 'dark'];
+  var THEME_META = { auto: ['🌓', '跟随系统'], light: ['☀️', '亮色'], dark: ['🌙', '暗色'] };
+
+  function currentTheme() {
+    try { return localStorage.getItem('theme') || 'auto'; } catch (e) { return 'auto'; }
+  }
+
+  function applyTheme(t) {
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    else delete document.documentElement.dataset.theme;
+    var meta = THEME_META[t] || THEME_META.auto;
+    themeBtn.textContent = meta[0];
+    themeBtn.title = '主题：' + meta[1] + '（点击切换）';
+  }
+
+  themeBtn.addEventListener('click', function () {
+    var next = THEME_ORDER[(THEME_ORDER.indexOf(currentTheme()) + 1) % 3];
+    try { localStorage.setItem('theme', next); } catch (e) { /* 忽略 */ }
+    applyTheme(next);
+  });
+  applyTheme(currentTheme());
+
   // ── 子标签切换 ─────────────────────────
   document.querySelectorAll('.subtab').forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -122,6 +146,7 @@
       if (p.image_url) {
         var img = document.createElement('img');
         img.className = 'prow-thumb';
+        if (p.sold_out) img.classList.add('soldout-thumb');
         img.src = p.image_url;
         img.alt = '';
         thumb = img;
@@ -140,6 +165,12 @@
         badge.className = 'prow-badge hidden-badge';
         badge.textContent = '已隐藏';
         name.appendChild(badge);
+      }
+      if (p.sold_out) {
+        var soBadge = document.createElement('span');
+        soBadge.className = 'prow-badge soldout-badge';
+        soBadge.textContent = '缺货';
+        name.appendChild(soBadge);
       }
       var meta = document.createElement('div');
       meta.className = 'prow-meta';
@@ -165,6 +196,11 @@
       opBtn('下移', function () { moveProduct(p, 1); });
       opBtn(p.visible ? '隐藏' : '显示', function () {
         api('PUT', '/api/products/' + p.id, { visible: !p.visible })
+          .then(loadAll)
+          .catch(function (err) { toast(err.message, true); });
+      });
+      opBtn(p.sold_out ? '恢复有货' : '标记缺货', function () {
+        api('PUT', '/api/products/' + p.id, { sold_out: !p.sold_out })
           .then(loadAll)
           .catch(function (err) { toast(err.message, true); });
       });
@@ -246,6 +282,7 @@
     $('#f-image-url').value = p ? esc(p.image_url) : '';
     $('#f-sort').value = p ? p.sort : (state.products.length ? 0 : 0);
     $('#f-visible').checked = p ? !!p.visible : true;
+    $('#f-soldout').checked = p ? !!p.sold_out : false;
     $('#upload-hint').textContent = '支持 JPG/PNG/GIF/WebP，10MB 以内';
     updateImagePreview();
     resetDescEditor();
@@ -272,6 +309,7 @@
       image_url: $('#f-image-url').value,
       sort: Number($('#f-sort').value) || 0,
       visible: $('#f-visible').checked,
+      sold_out: $('#f-soldout').checked,
     };
     if (!payload.name) { toast('请填写商品名称', true); return; }
 
@@ -444,12 +482,9 @@
     $('#desc-upload-hint').textContent = '';
   }
 
-  // ── 图片上传（主图）────────────────────
-  $('#btn-upload').addEventListener('click', function () { $('#f-image-file').click(); });
-
-  $('#f-image-file').addEventListener('change', function () {
-    var file = this.files[0];
-    if (!file) return;
+  // ── 图片上传（主图：按钮选择 + 拖拽到预览框）──
+  function uploadMainImage(file) {
+    if (!file || !/^image\//.test(file.type)) return;
     var hint = $('#upload-hint');
     hint.textContent = '上传中，请稍候..';
 
@@ -460,11 +495,43 @@
       $('#f-image-url').value = data.url;
       updateImagePreview();
       hint.textContent = '上传成功';
-      this.value = '';
-    }.bind(this)).catch(function (err) {
+      setTimeout(function () { if (hint.textContent === '上传成功') hint.textContent = ''; }, 2500);
+    }).catch(function (err) {
       hint.textContent = '上传失败：' + err.message;
     });
+  }
+
+  $('#btn-upload').addEventListener('click', function () { $('#f-image-file').click(); });
+
+  $('#f-image-file').addEventListener('change', function () {
+    uploadMainImage(this.files[0]);
+    this.value = '';
   });
+
+  // 拖拽上传：整个预览行作为放置区
+  (function () {
+    var zone = document.querySelector('.upload-row');
+    if (!zone) return;
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.add('dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.remove('dragover');
+      });
+    });
+    zone.addEventListener('drop', function (e) {
+      if (e.dataTransfer && e.dataTransfer.files.length) {
+        uploadMainImage(e.dataTransfer.files[0]);
+      }
+    });
+  })();
 
   $('#btn-remove-image').addEventListener('click', function () {
     $('#f-image-url').value = '';

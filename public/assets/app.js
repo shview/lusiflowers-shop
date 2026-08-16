@@ -65,9 +65,12 @@
     box.textContent = '';
 
     var categoryId = state.activeCategory;
-    var list = state.products.filter(function (p) {
+    var matched = state.products.filter(function (p) {
       return categoryId === 'all' || String(p.category_id) === categoryId;
     });
+    // 缺货商品排到该视图最后
+    var list = matched.filter(function (p) { return !p.sold_out; })
+      .concat(matched.filter(function (p) { return !!p.sold_out; }));
 
     if (!list.length) {
       var empty = document.createElement('div');
@@ -80,6 +83,11 @@
     var tpl = $('#tpl-product');
     list.forEach(function (p) {
       var node = tpl.content.cloneNode(true);
+      var card = node.querySelector('.product-card');
+      if (p.sold_out) {
+        card.classList.add('sold-out');
+        node.querySelector('.soldout-tag').hidden = false;
+      }
       var link = node.querySelector('.product-link');
       if (p.link) {
         link.href = p.link;
@@ -131,6 +139,7 @@
     }
 
     $('#detail-name').textContent = p.name || '';
+    $('#detail-soldout').hidden = !p.sold_out;
     $('#detail-price').textContent = p.price || '';
     $('#detail-desc').innerHTML = window.MD ? MD.render(p.description) : '';
 
@@ -159,6 +168,30 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !$('#detail-modal').hidden) closeDetail();
   });
+
+  // ── 主题切换（自动 → 亮 → 暗 循环）────
+  var themeBtn = $('#theme-toggle');
+  var THEME_ORDER = ['auto', 'light', 'dark'];
+  var THEME_META = { auto: ['🌓', '跟随系统'], light: ['☀️', '亮色'], dark: ['🌙', '暗色'] };
+
+  function currentTheme() {
+    try { return localStorage.getItem('theme') || 'auto'; } catch (e) { return 'auto'; }
+  }
+
+  function applyTheme(t) {
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    else delete document.documentElement.dataset.theme;
+    var meta = THEME_META[t] || THEME_META.auto;
+    themeBtn.textContent = meta[0];
+    themeBtn.title = '主题：' + meta[1] + '（点击切换）';
+  }
+
+  themeBtn.addEventListener('click', function () {
+    var next = THEME_ORDER[(THEME_ORDER.indexOf(currentTheme()) + 1) % 3];
+    try { localStorage.setItem('theme', next); } catch (e) { /* 忽略 */ }
+    applyTheme(next);
+  });
+  applyTheme(currentTheme());
 
   function load() {
     Promise.all([

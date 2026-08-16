@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS products (
   link TEXT DEFAULT '',
   sort INTEGER NOT NULL DEFAULT 0,
   visible INTEGER NOT NULL DEFAULT 1,
+  sold_out INTEGER NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 

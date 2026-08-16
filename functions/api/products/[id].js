@@ -67,6 +67,10 @@ export async function onRequestPut(context) {
     sets.push(`visible = ?`);
     binds.push(body.visible ? 1 : 0);
   }
+  if (body.sold_out !== undefined) {
+    sets.push(`sold_out = ?`);
+    binds.push(body.sold_out ? 1 : 0);
+  }
   if (sets.length === 0) return json({ error: '没有可更新的字段' }, 400);
 
   binds.push(id);

@@ -6,6 +6,15 @@
   <title>商品展示</title>
   <meta name="description" content="">
   <link rel="icon" href="data:,">
+  <script>
+    // 防主题闪烁：渲染前应用已保存的偏好
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch (e) { /* 忽略 */ }
+    })();
+  </script>
   <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
@@ -15,6 +24,7 @@
       <div class="nav-right">
         <a class="nav-link" href="/">购物</a>
         <a class="nav-link" href="#announcement">公告</a>
+        <button class="nav-link theme-toggle" id="theme-toggle" type="button" aria-label="切换主题" title="主题：跟随系统（点击切换）">🌓</button>
       </div>
     </div>
   </nav>
@@ -42,6 +52,7 @@
     <div class="product-card card">
       <a class="product-link" target="_blank" rel="noopener">
         <div class="product-thumb">
+          <div class="soldout-tag" hidden>缺货</div>
           <img loading="lazy" alt="">
           <div class="product-noimg" hidden>暂无图片</div>
         </div>
@@ -67,6 +78,7 @@
           <div class="product-noimg" id="detail-noimg" hidden>暂无图片</div>
         </div>
         <h2 class="detail-name" id="detail-name"></h2>
+        <span class="detail-soldout" id="detail-soldout" hidden>缺货</span>
         <div class="detail-price" id="detail-price"></div>
         <div class="md-content" id="detail-desc"></div>
         <a class="btn-detail-link" id="detail-link" target="_blank" rel="noopener" hidden>了解详情 →</a>

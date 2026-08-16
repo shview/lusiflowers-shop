@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>后台管理</title>
   <link rel="icon" href="data:,">
+  <script>
+    // 防主题闪烁：渲染前应用已保存的偏好
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch (e) { /* 忽略 */ }
+    })();
+  </script>
   <link rel="stylesheet" href="/admin/admin.css">
 </head>
 <body>
@@ -26,6 +35,7 @@
         <div class="nav-right">
           <a class="nav-link" href="/" target="_blank">查看网站 ↗</a>
           <a class="nav-link" href="javascript:void(0);" id="btn-logout">退出登录</a>
+          <button class="nav-link theme-toggle" id="theme-toggle" type="button" aria-label="切换主题" title="主题：跟随系统（点击切换）">🌓</button>
         </div>
       </div>
     </nav>
@@ -142,7 +152,7 @@
               <input type="file" id="f-image-file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" hidden>
               <button type="button" class="btn" id="btn-upload">上传图片</button>
               <button type="button" class="btn btn-danger-ghost" id="btn-remove-image">移除图片</button>
-              <div class="upload-hint" id="upload-hint">支持 JPG/PNG/GIF/WebP，10MB 以内</div>
+              <div class="upload-hint" id="upload-hint">支持 JPG/PNG/GIF/WebP，10MB 以内；可直接拖拽图片到左侧预览框</div>
             </div>
           </div>
           <input type="hidden" id="f-image-url">
@@ -155,6 +165,10 @@
           <label class="field check-field">
             <input type="checkbox" id="f-visible" checked>
             <span>在网站上显示</span>
+          </label>
+          <label class="field check-field">
+            <input type="checkbox" id="f-soldout">
+            <span>缺货（排在最后、图片蒙灰）</span>
           </label>
         </div>
       </form>

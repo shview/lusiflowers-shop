@@ -9,7 +9,7 @@ export async function onRequestGet(context) {
   const includeHidden = url.searchParams.get('all') === '1' && (await isAuthed(env, request));
 
   let sql = `
-    SELECT p.id, p.name, p.category_id, p.price, p.description, p.image_url, p.link, p.sort, p.visible, p.created_at,
+    SELECT p.id, p.name, p.category_id, p.price, p.description, p.image_url, p.link, p.sort, p.visible, p.sold_out, p.created_at,
            c.name AS category_name
     FROM products p LEFT JOIN categories c ON c.id = p.category_id
     WHERE 1=1`;
@@ -33,8 +33,8 @@ export async function onRequestPost(context) {
   }
 
   const stmt = env.DB.prepare(`
-    INSERT INTO products (name, category_id, price, description, image_url, link, sort, visible)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+    INSERT INTO products (name, category_id, price, description, image_url, link, sort, visible, sold_out)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const info = await stmt.bind(
     body.name.trim(),
     body.category_id ? Number(body.category_id) : null,
@@ -44,6 +44,7 @@ export async function onRequestPost(context) {
     String(body.link ?? ''),
     Number(body.sort ?? 0) || 0,
     body.visible === false ? 0 : 1,
+    body.sold_out ? 1 : 0,
   ).run();
 
   return json({ id: info.meta.last_row_id });
