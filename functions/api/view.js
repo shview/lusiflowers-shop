@@ -40,6 +40,8 @@ export async function onRequestPost(context) {
 
   const expected = await effectiveViewCode(base, hours);
   if (!input || input !== expected) {
+    // 拖慢爆破：每次失败固定延迟 800ms（Workers 并发下也显著降低尝试速率）
+    await new Promise(r => setTimeout(r, 800));
     return json({ error: '访问码不正确' }, 401);
   }
 

@@ -1,5 +1,8 @@
 // GET /  首页：注入浏览器标题、favicon 与（开启时的）OG 分享卡片信息
 // 微信/QQ/微博等抓取的是 HTML 源码（不执行 JS），因此由服务端写入 meta 标签。
+import { getCookie } from './_lib/auth.js';
+import { viewCookieToken } from './_lib/viewcode.js';
+
 export async function onRequestGet(context) {
   const { request, env } = context;
 
@@ -21,6 +24,12 @@ export async function onRequestGet(context) {
     desc = String(s.announcement || '').replace(/\s+/g, ' ').trim().slice(0, 100);
     ogOn = s.og_on === '1';
     if (s.favicon_url) favicon = new URL(s.favicon_url, request.url).href;
+
+    // 整站访问密码开启时，未持有效访问凭证则不输出 OG（避免抓取器拿到标题/摘要/首图）
+    if (ogOn && s.view_protect === '1' && s.view_password && env.ADMIN_SESSION_SECRET) {
+      const token = await viewCookieToken(env.ADMIN_SESSION_SECRET, s.view_password);
+      if (getCookie(request, 'shop_view') !== token) ogOn = false;
+    }
 
     if (ogOn) {
       const firstProduct = await env.DB.prepare(

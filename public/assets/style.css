@@ -635,3 +635,7 @@ main.container { flex: 1; padding-top: 20px; padding-bottom: 40px; }
 .contact-text:empty { display: none; }
 
 .contact-pop .btn-detail-link { padding: 8px 20px; font-size: 14px; margin-top: 4px; }
+
+/* 联系浮窗：耳机图标 + 咨询字样 */
+.contact-fab { flex-direction: column; gap: 2px; }
+.contact-fab-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; }

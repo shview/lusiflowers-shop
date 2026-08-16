@@ -19,7 +19,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/assets/style.css?v=10">
+  <link rel="stylesheet" href="/assets/style.css?v=11">
 </head>
 <body>
   <nav class="nav">
@@ -130,7 +130,13 @@
     </form>
   </div>
   <!-- 联系浮窗（后台设置里开启） -->
-  <div class="contact-fab" id="contact-fab" hidden>💬</div>
+  <div class="contact-fab" id="contact-fab" hidden>
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+      <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+    </svg>
+    <span class="contact-fab-label">咨询</span>
+  </div>
   <div class="contact-pop" id="contact-pop" hidden>
     <button class="contact-close" id="contact-close" type="button" aria-label="关闭">×</button>
     <div class="contact-title">联系咨询</div>
@@ -138,7 +144,7 @@
     <div class="contact-text" id="contact-text"></div>
     <a id="contact-link" class="btn-detail-link" target="_blank" rel="noopener" hidden></a>
   </div>
-<script src="/assets/md.js?v=10"></script>
-  <script src="/assets/app.js?v=10"></script>
+<script src="/assets/md.js?v=11"></script>
+  <script src="/assets/app.js?v=11"></script>
 </body>
 </html>
