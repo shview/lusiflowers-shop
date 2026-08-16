@@ -23,12 +23,18 @@
     list.addEventListener('dragend', function () { clearDragHints(); });
   }
 
-  // 按 DOM 顺序重写全部商品的 sort（拖拽排序保存）
-  function saveOrderFromDom() {
-    var rows = document.querySelectorAll('#product-list .prow');
+  // 按 DOM 顺序重写全部商品的 sort（拖拽排序保存）——基于全局顺序，筛选状态下也正确
+  function saveOrderFromDom(dragId, targetId, before) {
+    var ids = state.products.map(function (p) { return p.id; }); // 当前全局顺序
+    var from = ids.indexOf(dragId);
+    if (from === -1) return;
+    ids.splice(from, 1);
+    var to = ids.indexOf(targetId);
+    if (to === -1) { loadAll(); return; }
+    ids.splice(before ? to : to + 1, 0, dragId);
+
     var jobs = [];
-    rows.forEach(function (r, i) {
-      var id = Number(r.dataset.id);
+    ids.forEach(function (id, i) {
       var old = state.products.find(function (p) { return p.id === id; });
       if (old && old.sort !== i) jobs.push(api('PUT', '/api/products/' + id, { sort: i }));
     });
@@ -160,20 +166,55 @@
   }
 
   // ── 商品列表 ───────────────────────────
+  var adminCatFilter = 'all';
+
+  function fillCategoryFilter() {
+    var sel = $('#admin-cat-filter');
+    if (!sel) return;
+    var current = adminCatFilter;
+    sel.textContent = '';
+    var optAll = document.createElement('option');
+    optAll.value = 'all';
+    optAll.textContent = '全部分类';
+    sel.appendChild(optAll);
+    state.categories.forEach(function (c) {
+      var opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+    // 保留当前选择（选项仍在时）
+    sel.value = current;
+    if (sel.value !== String(current)) { adminCatFilter = 'all'; sel.value = 'all'; }
+  }
+
+  $('#admin-cat-filter').addEventListener('change', function () {
+    adminCatFilter = this.value;
+    renderProductList();
+  });
+
   function renderProductList() {
     var box = $('#product-list');
     box.textContent = '';
     bindListDragFallback();
+    fillCategoryFilter();
 
-    if (!state.products.length) {
+    var products = state.products;
+    if (adminCatFilter !== 'all') {
+      products = products.filter(function (p) { return String(p.category_id) === String(adminCatFilter); });
+    }
+
+    if (!products.length) {
       var empty = document.createElement('div');
       empty.className = 'loading';
-      empty.textContent = '还没有商品，点击右上角「新增商品」添加第一个吧';
+      empty.textContent = adminCatFilter === 'all'
+        ? '还没有商品，点击右上角「新增商品」添加第一个吧'
+        : '该分类下还没有商品';
       box.appendChild(empty);
       return;
     }
 
-    state.products.forEach(function (p) {
+    products.forEach(function (p) {
       var row = document.createElement('div');
       row.className = 'prow';
 
@@ -297,7 +338,7 @@
         var rect = row.getBoundingClientRect();
         var before = e.clientY < rect.top + rect.height / 2;
         box.insertBefore(dragRow, before ? row : row.nextSibling);
-        saveOrderFromDom();
+        saveOrderFromDom(Number(dragRow.dataset.id), Number(row.dataset.id), before);
       });
 
       box.appendChild(row);

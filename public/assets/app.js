@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var state = { categories: [], products: [], settings: {}, activeCategory: 'all', query: '' };
+  var state = { categories: [], products: [], settings: {}, activeCategory: 'all', query: '', sort: 'default' };
 
   var $ = function (sel) { return document.querySelector(sel); };
 
@@ -130,9 +130,39 @@
         return categoryId === 'all' || String(p.category_id) === categoryId;
       });
     }
-    // 缺货商品排到该视图最后
-    var list = matched.filter(function (p) { return !p.sold_out; })
-      .concat(matched.filter(function (p) { return !!p.sold_out; }));
+    // 缺货商品排到该视图最后（仅默认排序；显式排序模式按所选维度排）
+    var list;
+    if (state.sort === 'default') {
+      list = matched.filter(function (p) { return !p.sold_out; })
+        .concat(matched.filter(function (p) { return !!p.sold_out; }));
+    } else {
+      var priceNum = function (p) {
+        var m = String(p.price || '').replace(/[¥￥,\s]/g, '').match(/\d+(\.\d+)?/);
+        return m ? parseFloat(m[0]) : null;
+      };
+      list = matched.slice();
+      if (state.sort === 'price_asc') {
+        list.sort(function (a, b) {
+          var x = priceNum(a), y = priceNum(b);
+          if (x === null && y === null) return 0;
+          if (x === null) return 1;
+          if (y === null) return -1;
+          return x - y;
+        });
+      } else if (state.sort === 'price_desc') {
+        list.sort(function (a, b) {
+          var x = priceNum(a), y = priceNum(b);
+          if (x === null && y === null) return 0;
+          if (x === null) return 1;
+          if (y === null) return -1;
+          return y - x;
+        });
+      } else if (state.sort === 'newest') {
+        list.sort(function (a, b) { return String(b.created_at || '').localeCompare(String(a.created_at || '')); });
+      } else if (state.sort === 'oldest') {
+        list.sort(function (a, b) { return String(a.created_at || '').localeCompare(String(b.created_at || '')); });
+      }
+    }
 
     if (!list.length) {
       var empty = document.createElement('div');
@@ -377,6 +407,12 @@
         (e.target.closest('.carousel-stage') || e.target.closest('#lightbox') || e.target.closest('.md-content'))) {
       e.preventDefault();
     }
+  });
+
+  // ── 排序选择 ───────────────────────────
+  $('#sort-select').addEventListener('change', function () {
+    state.sort = this.value;
+    renderProducts();
   });
 
   // ── 搜索框（点图标展开）─────────────────

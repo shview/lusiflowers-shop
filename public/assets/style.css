@@ -639,3 +639,28 @@ main.container { flex: 1; padding-top: 20px; padding-bottom: 40px; }
 /* 联系浮窗：耳机图标 + 咨询字样 */
 .contact-fab { flex-direction: column; gap: 2px; }
 .contact-fab-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; }
+
+/* ── 列表工具栏（分类标签 + 排序）──────── */
+.list-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.list-tools .tabs { margin-bottom: 0; }
+
+.sort-select {
+  margin-left: auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-light);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.sort-select:hover { border-color: var(--accent); color: var(--accent); }

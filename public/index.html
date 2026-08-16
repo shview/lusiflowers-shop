@@ -19,7 +19,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/assets/style.css?v=11">
+  <link rel="stylesheet" href="/assets/style.css?v=12">
 </head>
 <body>
   <nav class="nav">
@@ -39,7 +39,16 @@
       <button class="btn" id="search-clear" type="button" aria-label="清空">×</button>
     </div>
 
-    <section class="tabs" id="tabs"></section>
+    <div class="list-tools">
+      <section class="tabs" id="tabs"></section>
+      <select id="sort-select" class="sort-select" aria-label="排序方式">
+        <option value="default">默认排序</option>
+        <option value="price_asc">价格从低到高</option>
+        <option value="price_desc">价格从高到低</option>
+        <option value="newest">最新上架</option>
+        <option value="oldest">最早上架</option>
+      </select>
+    </div>
 
     <section class="products" id="products">
       <div class="loading">努力加载中..</div>
@@ -144,7 +153,7 @@
     <div class="contact-text" id="contact-text"></div>
     <a id="contact-link" class="btn-detail-link" target="_blank" rel="noopener" hidden></a>
   </div>
-<script src="/assets/md.js?v=11"></script>
-  <script src="/assets/app.js?v=11"></script>
+<script src="/assets/md.js?v=12"></script>
+  <script src="/assets/app.js?v=12"></script>
 </body>
 </html>
