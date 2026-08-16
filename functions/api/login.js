@@ -6,6 +6,9 @@ export async function onRequestPost(context) {
   if (!env.ADMIN_PASSWORD) {
     return json({ error: '未配置 ADMIN_PASSWORD 环境变量，请先在 Cloudflare 控制台设置' }, 500);
   }
+  if (!env.ADMIN_SESSION_SECRET) {
+    return json({ error: '未配置 ADMIN_SESSION_SECRET 环境变量，请先在 Cloudflare 控制台设置' }, 500);
+  }
 
   let body;
   try {

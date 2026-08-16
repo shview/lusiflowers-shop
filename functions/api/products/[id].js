@@ -5,6 +5,38 @@ async function getOne(env, id) {
   return row;
 }
 
+// 从 image_url 与描述 Markdown 中提取本站托管的图片 key（仅 /api/img/images/<file> 形式）
+function extractImageKeys(product) {
+  const urls = [];
+  if (product.image_url) urls.push(product.image_url);
+  const mdImages = String(product.description || '').match(/!\[[^\]]*\]\([^)\s]+\)/g) || [];
+  for (const m of mdImages) {
+    const u = m.match(/\(([^)\s]+)\)$/);
+    if (u) urls.push(u[1]);
+  }
+
+  const keys = new Set();
+  for (const raw of urls) {
+    let pathname;
+    try {
+      pathname = /^https?:\/\//i.test(raw) ? new URL(raw).pathname : raw;
+    } catch {
+      continue;
+    }
+    const m = pathname.match(/^\/api\/img\/images\/([A-Za-z0-9._-]+)$/);
+    if (m && !m[1].includes('..')) keys.add('images/' + m[1]);
+  }
+  return [...keys];
+}
+
+// 该 key 是否仍被其他商品引用（主图或描述中出现）
+async function isReferencedElsewhere(env, key, excludeId) {
+  const { results } = await env.DB.prepare(
+    `SELECT image_url, description FROM products WHERE id != ?`
+  ).bind(excludeId).all();
+  return (results || []).some(p => p.image_url?.includes(key) || p.description?.includes(key));
+}
+
 // PUT /api/products/:id  更新商品（支持部分字段）
 export async function onRequestPut(context) {
   const { request, env, params } = context;
@@ -42,11 +74,30 @@ export async function onRequestPut(context) {
   return json({ ok: true });
 }
 
-// DELETE /api/products/:id
+// DELETE /api/products/:id  删除商品，并同步清理 R2 中它独占引用的图片
 export async function onRequestDelete(context) {
   const { env, params } = context;
   const id = Number(params.id);
-  if (!(await getOne(env, id))) return json({ error: '商品不存在' }, 404);
+
+  const product = await env.DB.prepare(
+    `SELECT id, image_url, description FROM products WHERE id = ?`
+  ).bind(id).first();
+  if (!product) return json({ error: '商品不存在' }, 404);
+
   await env.DB.prepare(`DELETE FROM products WHERE id = ?`).bind(id).run();
-  return json({ ok: true });
+
+  let removed = 0;
+  const keys = extractImageKeys(product);
+  if (keys.length && env.BUCKET) {
+    const doomed = [];
+    for (const key of keys) {
+      // 仍被其他商品引用的图片保留，避免误删共用图
+      if (!(await isReferencedElsewhere(env, key, id))) doomed.push(key);
+    }
+    // 尽力而为：清理失败不影响商品删除结果，仅留下孤儿文件
+    await Promise.allSettled(doomed.map(key => env.BUCKET.delete(key)));
+    removed = doomed.length;
+  }
+
+  return json({ ok: true, removed_images: removed });
 }

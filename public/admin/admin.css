@@ -195,7 +195,7 @@ textarea.input { resize: vertical; }
   overflow-y: auto;
 }
 
-.modal { width: 640px; max-width: 100%; }
+.modal { width: 760px; max-width: 100%; }
 
 .modal-head {
   display: flex;
@@ -221,6 +221,57 @@ textarea.input { resize: vertical; }
 /* ── 图片上传 ─────────────────────────── */
 .upload-row { display: flex; gap: 14px; align-items: flex-start; }
 
+/* ── Markdown 编辑器 ─────────────────── */
+.md-editor { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.md-editor.dragover { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2); }
+.md-editor.dragover .md-textarea { background: rgba(64, 158, 255, 0.04); }
+
+.md-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  background: #fafbfc;
+  flex-wrap: wrap;
+}
+
+.md-btn {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1;
+}
+
+.md-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.md-toolbar-hint { font-size: 12px; color: var(--text-light); margin-left: auto; }
+
+.md-textarea {
+  border: none;
+  border-radius: 0;
+  display: block;
+  font-family: Consolas, Monaco, "Courier New", monospace;
+  font-size: 13px;
+  min-height: 160px;
+}
+
+.md-textarea:focus { outline: none; }
+
+.md-editor-ops { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+
+.md-preview-wrap { margin-top: 8px; border: 1px dashed var(--border); border-radius: 6px; padding: 12px 14px; background: #fafbfc; }
+
+.md-preview-title { font-size: 12px; color: var(--text-light); margin-bottom: 8px; }
+
+.md-preview { font-size: 14px; }
+
 .upload-preview {
   width: 160px;
   height: 120px;
@@ -237,6 +288,18 @@ textarea.input { resize: vertical; }
 
 .upload-ops { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .upload-hint { width: 100%; font-size: 12px; color: var(--text-light); }
+
+/* ── Markdown 渲染内容（预览）─────────── */
+.md-preview img, .md-preview-wrap img { max-width: 100%; height: auto; border-radius: 6px; display: block; margin: 8px 0; }
+.md-preview h3, .md-preview h4, .md-preview h5, .md-preview h6 { margin: 12px 0 6px; }
+.md-preview p { margin: 8px 0; }
+.md-preview ul, .md-preview ol { margin: 8px 0; padding-left: 22px; }
+.md-preview blockquote { margin: 8px 0; padding: 4px 12px; border-left: 3px solid var(--accent); color: var(--text-light); background: #fff; border-radius: 0 4px 4px 0; }
+.md-preview code { background: #eef1f4; border-radius: 4px; padding: 1px 5px; font-size: 13px; }
+.md-preview pre { background: #2d2d2d; color: #f0f0f0; border-radius: 6px; padding: 10px 12px; overflow-x: auto; }
+.md-preview pre code { background: none; color: inherit; padding: 0; }
+.md-preview hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+.md-preview a { color: var(--accent); }
 
 /* ── Toast ────────────────────────────── */
 .toast {

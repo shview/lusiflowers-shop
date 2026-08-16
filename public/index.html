@@ -50,13 +50,31 @@
           <div class="product-desc"></div>
           <div class="product-price-row">
             <span class="product-price"></span>
-            <span class="product-buy">了解详情 →</span>
+            <span class="product-buy">查看详情 →</span>
           </div>
         </div>
       </a>
     </div>
   </template>
 
+  <!-- 商品详情弹窗 -->
+  <div class="detail-mask" id="detail-modal" hidden>
+    <div class="detail card">
+      <button class="detail-close" id="detail-close" type="button" aria-label="关闭">×</button>
+      <div class="detail-body">
+        <div class="detail-thumb">
+          <img id="detail-img" alt="" hidden>
+          <div class="product-noimg" id="detail-noimg" hidden>暂无图片</div>
+        </div>
+        <h2 class="detail-name" id="detail-name"></h2>
+        <div class="detail-price" id="detail-price"></div>
+        <div class="md-content" id="detail-desc"></div>
+        <a class="btn-detail-link" id="detail-link" target="_blank" rel="noopener" hidden>了解详情 →</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/md.js"></script>
   <script src="/assets/app.js"></script>
 </body>
 </html>

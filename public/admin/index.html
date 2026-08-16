@@ -106,10 +106,30 @@
             <input type="text" id="f-price" class="input" maxlength="50">
           </label>
         </div>
-        <label class="field">
-          <span class="field-label">商品描述</span>
-          <textarea id="f-description" class="input" rows="4" maxlength="500" placeholder="卡片上展示的两行简介"></textarea>
-        </label>
+        <div class="field">
+          <span class="field-label">商品描述（Markdown 图文，可直接把图片拖进 / 粘贴到编辑区）</span>
+          <div class="md-editor" id="md-editor">
+            <div class="md-toolbar">
+              <button type="button" class="md-btn" data-cmd="bold" title="加粗"><b>B</b></button>
+              <button type="button" class="md-btn" data-cmd="italic" title="斜体"><i>I</i></button>
+              <button type="button" class="md-btn" data-cmd="h" title="小节标题">H</button>
+              <button type="button" class="md-btn" data-cmd="ul" title="列表">•</button>
+              <button type="button" class="md-btn" data-cmd="link" title="插入链接">🔗</button>
+              <button type="button" class="md-btn" data-cmd="image" title="插入图片">🖼</button>
+              <span class="md-toolbar-hint">图片也可直接拖入 / 粘贴</span>
+            </div>
+            <textarea id="f-description" class="input md-textarea" rows="8" maxlength="5000" placeholder="描述内容…支持图文混排，把图片拖进这里即可上传"></textarea>
+            <input type="file" id="f-desc-image-file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" multiple hidden>
+          </div>
+          <div class="md-preview-wrap" id="md-preview-wrap" hidden>
+            <div class="md-preview-title">预览（访客看到的效果）</div>
+            <div class="md-preview" id="md-preview"></div>
+          </div>
+          <div class="md-editor-ops">
+            <button type="button" class="btn btn-sm" id="btn-toggle-preview">预览</button>
+            <span class="upload-hint" id="desc-upload-hint"></span>
+          </div>
+        </div>
         <label class="field">
           <span class="field-label">跳转链接（点击卡片后打开的网址，可留空）</span>
           <input type="url" id="f-link" class="input" placeholder="https://">
@@ -146,6 +166,7 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
+  <script src="/assets/md.js"></script>
   <script src="/admin/admin.js"></script>
 </body>
 </html>

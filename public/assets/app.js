@@ -84,12 +84,16 @@
       if (p.link) {
         link.href = p.link;
       } else {
-        // 无跳转链接时降级为普通容器，避免 javascript:void(0) 锚点
-        var div = document.createElement('div');
-        div.className = 'product-link';
-        link.replaceWith(div);
-        link = div;
+        // 无跳转链接时去掉锚点行为，保留内部结构（缩略图等）
+        link.removeAttribute('href');
+        link.removeAttribute('target');
       }
+      // 单击打开详情弹窗；Ctrl/Cmd+点击保留原链接新标签页行为
+      link.addEventListener('click', function (e) {
+        if (e.metaKey || e.ctrlKey) return;
+        e.preventDefault();
+        openDetail(p);
+      });
 
       var img = node.querySelector('img');
       if (p.image_url) {
@@ -101,12 +105,60 @@
       }
 
       node.querySelector('.product-name').textContent = p.name || '';
-      node.querySelector('.product-desc').textContent = p.description || '';
+      // 卡片简介用纯文本摘要（Markdown 中的图片/标记不进卡片）
+      node.querySelector('.product-desc').textContent = window.MD
+        ? MD.excerpt(p.description, 80)
+        : String(p.description || '');
       node.querySelector('.product-price').textContent = p.price || '';
-      if (!p.link) node.querySelector('.product-buy').textContent = '';
+      if (!p.description) node.querySelector('.product-desc').textContent = '';
       box.appendChild(node);
     });
   }
+
+  // ── 商品详情弹窗 ───────────────────────
+  function openDetail(p) {
+    var img = $('#detail-img');
+    var noimg = $('#detail-noimg');
+    if (p.image_url) {
+      img.src = p.image_url;
+      img.alt = p.name || '';
+      img.hidden = false;
+      noimg.hidden = true;
+    } else {
+      img.removeAttribute('src');
+      img.hidden = true;
+      noimg.hidden = false;
+    }
+
+    $('#detail-name').textContent = p.name || '';
+    $('#detail-price').textContent = p.price || '';
+    $('#detail-desc').innerHTML = window.MD ? MD.render(p.description) : '';
+
+    var linkBtn = $('#detail-link');
+    if (p.link) {
+      linkBtn.href = p.link;
+      linkBtn.hidden = false;
+    } else {
+      linkBtn.removeAttribute('href');
+      linkBtn.hidden = true;
+    }
+
+    $('#detail-modal').hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+  }
+
+  function closeDetail() {
+    $('#detail-modal').hidden = true;
+    document.documentElement.style.overflow = '';
+  }
+
+  $('#detail-close').addEventListener('click', closeDetail);
+  $('#detail-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeDetail();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('#detail-modal').hidden) closeDetail();
+  });
 
   function load() {
     Promise.all([
@@ -125,7 +177,7 @@
       box.textContent = '';
       var el = document.createElement('div');
       el.className = 'empty';
-      el.textContent = '加载失败，请刷新重试';
+      el.textContent = '加载失败：' + (err && err.message ? err.message : '未知错误');
       box.appendChild(el);
     });
   }

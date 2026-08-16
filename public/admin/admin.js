@@ -248,6 +248,7 @@
     $('#f-visible').checked = p ? !!p.visible : true;
     $('#upload-hint').textContent = '支持 JPG/PNG/GIF/WebP，10MB 以内';
     updateImagePreview();
+    resetDescEditor();
     $('#product-modal').hidden = false;
   }
 
@@ -285,7 +286,165 @@
     }).catch(function (err) { toast(err.message, true); });
   });
 
-  // ── 图片上传 ───────────────────────────
+  // ── Markdown 描述编辑器 ───────────────
+  var descEditor = {
+    textarea: null,
+    hint: null,
+
+    init: function () {
+      var ta = $('#f-description');
+      var editor = $('#md-editor');
+      this.textarea = ta;
+      this.hint = $('#desc-upload-hint');
+
+      // 工具栏
+      editor.querySelectorAll('.md-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () { descEditor.toolbar(btn.dataset.cmd); });
+      });
+
+      // 图片按钮 → 文件选择
+      $('[data-cmd="image"]') && $('#f-desc-image-file').addEventListener('change', function () {
+        descEditor.uploadFiles(this.files);
+        this.value = '';
+      });
+
+      // 实时预览
+      ta.addEventListener('input', function () { descEditor.renderPreview(); });
+
+      // 拖拽上传
+      ['dragenter', 'dragover'].forEach(function (ev) {
+        editor.addEventListener(ev, function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          editor.classList.add('dragover');
+        });
+      });
+      ['dragleave', 'drop'].forEach(function (ev) {
+        editor.addEventListener(ev, function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          editor.classList.remove('dragover');
+        });
+      });
+      editor.addEventListener('drop', function (e) {
+        if (e.dataTransfer && e.dataTransfer.files.length) {
+          descEditor.uploadFiles(e.dataTransfer.files);
+        }
+      });
+
+      // 粘贴上传
+      ta.addEventListener('paste', function (e) {
+        var items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        var files = [];
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].kind === 'file' && /^image\//.test(items[i].type)) {
+            var f = items[i].getAsFile();
+            if (f) files.push(f);
+          }
+        }
+        if (files.length) {
+          e.preventDefault();
+          descEditor.uploadFiles(files);
+        }
+      });
+    },
+
+    // 在光标处插入文本
+    insertAtCursor: function (text) {
+      var ta = this.textarea;
+      var start = ta.selectionStart, end = ta.selectionEnd;
+      ta.value = ta.value.slice(0, start) + text + ta.value.slice(end);
+      var pos = start + text.length;
+      ta.focus();
+      ta.setSelectionRange(pos, pos);
+      this.renderPreview();
+    },
+
+    wrapSelection: function (before, after, placeholder) {
+      var ta = this.textarea;
+      var start = ta.selectionStart, end = ta.selectionEnd;
+      var sel = ta.value.slice(start, end) || placeholder;
+      ta.value = ta.value.slice(0, start) + before + sel + after + ta.value.slice(end);
+      ta.focus();
+      ta.setSelectionRange(start + before.length, start + before.length + sel.length);
+      this.renderPreview();
+    },
+
+    linePrefix: function (prefix) {
+      var ta = this.textarea;
+      var start = ta.value.lastIndexOf('\n', ta.selectionStart - 1) + 1;
+      var end = ta.value.indexOf('\n', ta.selectionEnd);
+      if (end === -1) end = ta.value.length;
+      var block = ta.value.slice(start, end) || '文字';
+      var lines = block.split('\n').map(function (l) { return prefix + l; });
+      ta.value = ta.value.slice(0, start) + lines.join('\n') + ta.value.slice(end);
+      ta.focus();
+      ta.setSelectionRange(start, start + lines.join('\n').length);
+      this.renderPreview();
+    },
+
+    toolbar: function (cmd) {
+      if (cmd === 'bold') this.wrapSelection('**', '**', '加粗文字');
+      else if (cmd === 'italic') this.wrapSelection('*', '*', '斜体文字');
+      else if (cmd === 'h') this.linePrefix('## ');
+      else if (cmd === 'ul') this.linePrefix('- ');
+      else if (cmd === 'link') this.wrapSelection('[', '](https://)', '链接文字');
+      else if (cmd === 'image') $('#f-desc-image-file').click();
+    },
+
+    uploadFiles: function (fileList) {
+      var files = Array.prototype.slice.call(fileList || []).filter(function (f) {
+        return /^image\//.test(f.type);
+      });
+      if (!files.length) return;
+      var hint = this.hint;
+      hint.textContent = '上传中（' + files.length + ' 张）..';
+
+      var that = this;
+      var queue = files.slice();
+      (function next() {
+        if (!queue.length) {
+          hint.textContent = '上传完成';
+          setTimeout(function () { if (hint.textContent === '上传完成') hint.textContent = ''; }, 2500);
+          return;
+        }
+        var file = queue.shift();
+        var form = new FormData();
+        form.append('file', file);
+        api('POST', '/api/upload', form, true).then(function (data) {
+          that.insertAtCursor('\n\n![图片](' + data.url + ')\n\n');
+          next();
+        }).catch(function (err) {
+          hint.textContent = '上传失败：' + err.message;
+        });
+      })();
+    },
+
+    renderPreview: function () {
+      var wrap = $('#md-preview-wrap');
+      if (wrap.hidden) return;
+      $('#md-preview').innerHTML = window.MD ? MD.render(this.textarea.value) : '';
+    }
+  };
+
+  $('#btn-toggle-preview').addEventListener('click', function () {
+    var wrap = $('#md-preview-wrap');
+    wrap.hidden = !wrap.hidden;
+    this.textContent = wrap.hidden ? '预览' : '关闭预览';
+    if (!wrap.hidden) descEditor.renderPreview();
+  });
+
+  descEditor.init();
+
+  // 打开弹窗时重置预览状态
+  function resetDescEditor() {
+    $('#md-preview-wrap').hidden = true;
+    $('#btn-toggle-preview').textContent = '预览';
+    $('#desc-upload-hint').textContent = '';
+  }
+
+  // ── 图片上传（主图）────────────────────
   $('#btn-upload').addEventListener('click', function () { $('#f-image-file').click(); });
 
   $('#f-image-file').addEventListener('change', function () {
