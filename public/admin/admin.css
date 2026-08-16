@@ -427,3 +427,14 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
 .price-num { width: 90px; padding: 5px 8px; font-size: 13px; }
 
 .price-mode .price-num:last-child { flex: 1; width: auto; }
+
+/* ── 网站图标预览 ─────────────────────── */
+.favicon-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  object-fit: contain;
+  background: var(--card-bg);
+  flex-shrink: 0;
+}

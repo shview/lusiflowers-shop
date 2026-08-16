@@ -813,20 +813,59 @@
   // ── 站点设置 ───────────────────────────
   function fillSettingsForm(settings) {
     $('#set-site-name').value = settings.site_name || '';
+    $('#set-home-title').value = settings.home_title || '';
     $('#set-announcement').value = settings.announcement || '';
     $('#set-watermark').checked = settings.watermark_on !== '0';
+    $('#set-og').checked = settings.og_on === '1';
+    faviconPending = null;
+    updateFaviconPreview(settings.favicon_url || '');
   }
+
+  // ── 网站图标上传（不加水印，直接原图存储）──
+  var faviconPending = null; // null=未改动；''=恢复默认；其他=新图标 URL
+
+  function updateFaviconPreview(url) {
+    $('#favicon-preview').src = url || '/favicon.svg';
+  }
+
+  $('#btn-favicon-upload').addEventListener('click', function () { $('#favicon-file').click(); });
+
+  $('#favicon-file').addEventListener('change', function () {
+    var file = this.files[0];
+    this.value = '';
+    if (!file || !/^image\//.test(file.type)) return;
+    var form = new FormData();
+    form.append('file', file);
+    api('POST', '/api/upload', form, true).then(function (data) {
+      faviconPending = data.url;
+      updateFaviconPreview(data.url);
+      toast('图标已上传，记得点「保存设置」生效');
+    }).catch(function (err) { toast(err.message, true); });
+  });
+
+  $('#btn-favicon-reset').addEventListener('click', function () {
+    faviconPending = '';
+    updateFaviconPreview('');
+    toast('将恢复默认图标，记得点「保存设置」生效');
+  });
 
   $('#settings-form').addEventListener('submit', function (e) {
     e.preventDefault();
+    var faviconUrl = faviconPending !== null ? faviconPending : (state.settings.favicon_url || '');
     api('PUT', '/api/settings', {
       site_name: $('#set-site-name').value.trim(),
+      home_title: $('#set-home-title').value.trim(),
+      favicon_url: faviconUrl,
       announcement: $('#set-announcement').value,
       watermark_on: $('#set-watermark').checked ? '1' : '0',
+      og_on: $('#set-og').checked ? '1' : '0',
     }).then(function () {
       // 同步到本会话状态，立即影响后续上传
       state.settings.watermark_on = $('#set-watermark').checked ? '1' : '0';
       state.settings.site_name = $('#set-site-name').value.trim();
+      state.settings.home_title = $('#set-home-title').value.trim();
+      state.settings.favicon_url = faviconUrl;
+      faviconPending = null;
       $('#settings-hint').textContent = '已保存 ✓';
       setTimeout(function () { $('#settings-hint').textContent = ''; }, 2500);
     }).catch(function (err) { toast(err.message, true); });

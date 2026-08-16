@@ -27,4 +27,5 @@ CREATE TABLE IF NOT EXISTS settings (
 INSERT OR IGNORE INTO settings (key, value) VALUES ('site_name', '商品展示');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('announcement', '欢迎光临，这里是公告区。');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('watermark_on', '1');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('og_on', '0');
 INSERT OR IGNORE INTO categories (name, sort) VALUES ('推荐', 0);

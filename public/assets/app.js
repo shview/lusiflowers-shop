@@ -33,10 +33,17 @@
 
   function renderSettings(settings) {
     state.settings = settings || {};
-    var name = state.settings.site_name || '商品展示';
-    document.title = name;
-    $('#site-name').textContent = name;
-    $('#footer-site-name').textContent = name;
+    var displayName = state.settings.site_name || '商品展示';
+    var pageTitle = state.settings.home_title || displayName;
+    document.title = pageTitle;
+    $('#site-name').textContent = displayName;
+    $('#footer-site-name').textContent = displayName;
+
+    // 自定义网站图标
+    var iconLink = document.querySelector('link[rel="icon"]');
+    if (iconLink && state.settings.favicon_url) {
+      iconLink.href = new URL(state.settings.favicon_url, location.href).href;
+    }
 
     var announceBtn = $('#btn-announce');
     var hasAnnouncement = !!(state.settings.announcement && state.settings.announcement.trim());
