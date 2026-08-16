@@ -1,0 +1,19 @@
+# HTML 每次都校验（部署后立刻生效）
+/index.html
+  Cache-Control: no-cache
+
+/admin/index.html
+  Cache-Control: no-cache
+
+# JS/CSS 短缓存 + 必须重新校验，避免新旧代码不同步
+/assets/*.js
+  Cache-Control: public, max-age=600, must-revalidate
+
+/assets/*.css
+  Cache-Control: public, max-age=600, must-revalidate
+
+/admin/*.js
+  Cache-Control: public, max-age=600, must-revalidate
+
+/admin/*.css
+  Cache-Control: public, max-age=600, must-revalidate

@@ -298,6 +298,19 @@
     $('#announcement-modal').hidden = true;
     document.documentElement.style.overflow = '';
   }
+
+  // 公告默认展示：首次访问或公告内容更新后自动弹一次（× 掉即记住，直到下次更新）
+  function maybeAutoShowAnnouncement() {
+    var content = String(state.settings.announcement || '').trim();
+    if (!content) return;
+    var sig = String(state.settings.site_name || '') + '|' + content;
+    var saved = '';
+    try { saved = localStorage.getItem('announce_read') || ''; } catch (e) { /* 忽略 */ }
+    if (saved !== sig) {
+      openAnnounce();
+      try { localStorage.setItem('announce_read', sig); } catch (e) { /* 忽略 */ }
+    }
+  }
   $('#btn-announce').addEventListener('click', openAnnounce);
   $('#announce-close').addEventListener('click', closeAnnounce);
   $('#announcement-modal').addEventListener('click', function (e) {
@@ -371,6 +384,7 @@
       applyWatermarks();
       renderTabs();
       renderProducts();
+      maybeAutoShowAnnouncement();
     }).catch(function (err) {
       console.error(err);
       var box = $('#products');

@@ -108,6 +108,11 @@ img { max-width: 100%; }
 .nav-right { display: flex; gap: 4px; }
 
 .nav-link {
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
   padding: 6px 12px;
   border-radius: 6px;
   color: var(--text-light);
@@ -364,6 +369,10 @@ main.container { flex: 1; padding-top: 20px; padding-bottom: 40px; }
   font-size: 16px;
   line-height: 1;
   padding: 6px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-light);
 }
 
 /* ── 商品图轮播 ───────────────────────── */
