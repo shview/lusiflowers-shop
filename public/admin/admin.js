@@ -5,6 +5,14 @@
   var state = { categories: [], products: [], settings: {} };
   var dragRow = null;
 
+  // 清除所有拖拽指示线
+  function clearDragHints() {
+    document.querySelectorAll('#product-list .prow').forEach(function (r) {
+      r.style.borderTop = '';
+      r.style.borderBottom = '';
+    });
+  }
+
   // 按 DOM 顺序重写全部商品的 sort（拖拽排序保存）
   function saveOrderFromDom() {
     var rows = document.querySelectorAll('#product-list .prow');
@@ -193,7 +201,7 @@
       meta.className = 'prow-meta';
       var catName = p.category_name || '未分类';
       meta.textContent = catName + (p.price ? ' · ' + p.price : '') + ' · 排序 ' + p.sort
-        + (p.views ? ' · 浏览 ' + p.views : '');
+        + ' · 浏览 ' + (p.views || 0);
       row.draggable = true;
       row.dataset.id = p.id;
       main.appendChild(name);
@@ -259,37 +267,27 @@
       });
       row.addEventListener('dragend', function () {
         row.classList.remove('dragging');
-        box.querySelectorAll('.prow').forEach(function (r) { r.classList.remove('drop-hint'); });
+        clearDragHints(); // 兜底：拖拽取消/拖回原位/拖到列表外都清理指示线
       });
       row.addEventListener('dragover', function (e) {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         var rect = row.getBoundingClientRect();
         var before = e.clientY < rect.top + rect.height / 2;
-        row.classList.toggle('drop-hint', true);
-        row.style.borderTop = before ? '2px solid var(--accent)' : '';
-        row.style.borderBottom = before ? '' : '2px solid var(--accent)';
-      });
-      row.addEventListener('dragleave', function () {
-        row.style.borderTop = '';
-        row.style.borderBottom = '';
+        clearDragHints();
+        if (before) row.style.borderTop = '2px solid var(--accent)';
+        else row.style.borderBottom = '2px solid var(--accent)';
       });
       row.addEventListener('drop', function (e) {
         e.preventDefault();
-        if (!dragRow || dragRow === row) { resetBorders(); return; }
+        var hadHint = row.style.borderTop || row.style.borderBottom;
+        clearDragHints();
+        if (!dragRow || dragRow === row || !hadHint) return;
         var rect = row.getBoundingClientRect();
         var before = e.clientY < rect.top + rect.height / 2;
         box.insertBefore(dragRow, before ? row : row.nextSibling);
-        resetBorders();
         saveOrderFromDom();
       });
-      function resetBorders() {
-        box.querySelectorAll('.prow').forEach(function (r) {
-          r.style.borderTop = '';
-          r.style.borderBottom = '';
-          r.classList.remove('drop-hint');
-        });
-      }
 
       box.appendChild(row);
     });

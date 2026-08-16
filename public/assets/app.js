@@ -266,28 +266,7 @@
     $('#lightbox-counter').textContent = (lightbox.index + 1) + ' / ' + lightbox.images.length;
   }
 
-  // ── 水印（站名平铺，SVG 背景）───────────
-  function watermarkBg() {
-    var name = (state.settings.site_name || '').trim();
-    if (!name) return null;
-    var svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="260" height="170">' +
-      '<text x="130" y="90" fill="rgba(255,255,255,0.16)" font-size="20" ' +
-      'font-family="sans-serif" text-anchor="middle" transform="rotate(-24 130 85)">' +
-      name.replace(/&/g, '&amp;').replace(/</g, '&lt;') +
-      '</text></svg>';
-    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
-  }
-
-  function applyWatermarks() {
-    // 后台关闭水印开关时不叠加 CSS 水印（烧入像素的水印不受此开关影响）
-    var bg = state.settings.watermark_on === '0' ? null : watermarkBg();
-    [['#carousel-watermark'], ['#lightbox-watermark']].forEach(function (pair) {
-      var el = $(pair[0]);
-      if (bg) { el.style.backgroundImage = bg; el.hidden = false; }
-      else el.hidden = true;
-    });
-  }
+  // 水印说明：展示图在上传时已由后台烧入像素水印，前台不再叠加 CSS 水印层
 
   // ── 事件绑定 ───────────────────────────
   $('#detail-close').addEventListener('click', closeDetail);
@@ -463,7 +442,6 @@
       renderSettings(results[0].settings || {});
       state.categories = results[1].categories || [];
       state.products = results[2].products || [];
-      applyWatermarks();
       renderTabs();
       renderProducts();
       maybeAutoShowAnnouncement();

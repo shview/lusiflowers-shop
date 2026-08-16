@@ -519,14 +519,6 @@ main.container { flex: 1; padding-top: 20px; padding-bottom: 40px; }
   border-radius: 999px;
 }
 
-/* ── 水印层 ───────────────────────────── */
-.watermark-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background-repeat: repeat;
-}
 
 /* ── 公告弹窗 ─────────────────────────── */
 .announce-card { width: 540px; max-width: 100%; }
