@@ -84,6 +84,10 @@
             <span class="field-label">公告内容（换行有效，可直接粘贴链接）</span>
             <textarea id="set-announcement" class="input" rows="6" placeholder="公告内容"></textarea>
           </label>
+          <label class="field check-field">
+            <input type="checkbox" id="set-watermark" checked>
+            <span>图片水印：上传时把站名水印烧入图片（原图另存不公开；关闭后仅新上传的图不再加水印）</span>
+          </label>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">保存设置</button>
             <span class="save-hint" id="settings-hint"></span>
@@ -111,10 +115,21 @@
             <span class="field-label">分类</span>
             <select id="f-category" class="input"></select>
           </label>
-          <label class="field">
-            <span class="field-label">价格（展示用文字，如 ¥99 / 免费咨询）</span>
-            <input type="text" id="f-price" class="input" maxlength="50">
-          </label>
+          <div class="field">
+            <span class="field-label">价格（纯数字自动显示 ¥）</span>
+            <div class="price-modes">
+              <label class="price-mode"><input type="radio" name="price-mode" value="single" checked>单价
+                <input type="text" id="f-price-num" class="input price-num" inputmode="decimal" placeholder="199">
+              </label>
+              <label class="price-mode"><input type="radio" name="price-mode" value="range">区间
+                <input type="text" id="f-price-min" class="input price-num" inputmode="decimal" placeholder="88"> -
+                <input type="text" id="f-price-max" class="input price-num" inputmode="decimal" placeholder="188">
+              </label>
+              <label class="price-mode"><input type="radio" name="price-mode" value="custom">文字
+                <input type="text" id="f-price-text" class="input price-num" placeholder="询价 / 面议">
+              </label>
+            </div>
+          </div>
         </div>
         <div class="field">
           <span class="field-label">商品描述（Markdown 图文，可直接把图片拖进 / 粘贴到编辑区）</span>

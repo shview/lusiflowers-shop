@@ -62,6 +62,17 @@
     });
   }
 
+  // 价格展示：纯数字自动加 ¥，"88-188" 转 "¥88 - ¥188"，其他文字原样
+  function formatPrice(raw) {
+    var s = String(raw || '').trim();
+    if (!s) return '';
+    var num = s.replace(/[¥￥,\s]/g, '');
+    if (/^\d+(\.\d+)?$/.test(num)) return '¥' + num;
+    var m = num.match(/^(\d+(?:\.\d+)?)\s*[-~]\s*(\d+(?:\.\d+)?)$/);
+    if (m) return '¥' + m[1] + ' - ¥' + m[2];
+    return s;
+  }
+
   function renderProducts() {
     var box = $('#products');
     box.textContent = '';
@@ -107,7 +118,7 @@
       node.querySelector('.product-desc').textContent = window.MD
         ? MD.excerpt(p.description, 80)
         : String(p.description || '');
-      node.querySelector('.product-price').textContent = p.price || '';
+      node.querySelector('.product-price').textContent = formatPrice(p.price);
       if (!p.description) node.querySelector('.product-desc').textContent = '';
       box.appendChild(node);
     });
@@ -178,7 +189,7 @@
 
     $('#detail-name').textContent = p.name || '';
     $('#detail-soldout').hidden = !p.sold_out;
-    $('#detail-price').textContent = p.price || '';
+    $('#detail-price').textContent = formatPrice(p.price);
     $('#detail-desc').innerHTML = window.MD ? MD.render(p.description) : '';
 
     var linkBtn = $('#detail-link');
@@ -237,7 +248,8 @@
   }
 
   function applyWatermarks() {
-    var bg = watermarkBg();
+    // 后台关闭水印开关时不叠加 CSS 水印（烧入像素的水印不受此开关影响）
+    var bg = state.settings.watermark_on === '0' ? null : watermarkBg();
     [['#carousel-watermark'], ['#lightbox-watermark']].forEach(function (pair) {
       var el = $(pair[0]);
       if (bg) { el.style.backgroundImage = bg; el.hidden = false; }

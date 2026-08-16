@@ -15,7 +15,7 @@ export async function onRequestPut(context) {
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== 'object') return json({ error: '请求格式错误' }, 400);
 
-  const allowed = ['site_name', 'announcement'];
+  const allowed = ['site_name', 'announcement', 'watermark_on'];
   const stmts = [];
   for (const [k, v] of Object.entries(body)) {
     if (!allowed.includes(k)) continue;

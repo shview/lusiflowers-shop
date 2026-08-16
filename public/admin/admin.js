@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var state = { categories: [], products: [] };
+  var state = { categories: [], products: [], settings: {} };
 
   var $ = function (sel) { return document.querySelector(sel); };
 
@@ -118,9 +118,10 @@
     ]).then(function (r) {
       state.categories = r[0].categories || [];
       state.products = r[1].products || [];
+      state.settings = r[2].settings || {};
       renderProductList();
       renderCategoryList();
-      fillSettingsForm(r[2].settings || {});
+      fillSettingsForm(state.settings);
     }).catch(function (err) { toast(err.message, true); });
   }
 
@@ -244,6 +245,54 @@
   }
 
   // ── 商品弹窗 ───────────────────────────
+  // ── 价格三模式（单价 / 区间 / 自定义文字）──
+  function setPriceMode(mode) {
+    document.querySelectorAll('input[name="price-mode"]').forEach(function (r) {
+      r.checked = r.value === mode;
+    });
+  }
+
+  function fillPriceForm(raw) {
+    var s = String(raw || '').trim();
+    $('#f-price-num').value = '';
+    $('#f-price-min').value = '';
+    $('#f-price-max').value = '';
+    $('#f-price-text').value = '';
+
+    var num = s.replace(/[¥￥,\s]/g, '');
+    var range = num.match(/^(\d+(?:\.\d+)?)\s*[-~]\s*(\d+(?:\.\d+)?)$/);
+    if (range) {
+      setPriceMode('range');
+      $('#f-price-min').value = range[1];
+      $('#f-price-max').value = range[2];
+    } else if (s && /^\d+(\.\d+)?$/.test(num)) {
+      setPriceMode('single');
+      $('#f-price-num').value = num;
+    } else if (s) {
+      setPriceMode('custom');
+      $('#f-price-text').value = s;
+    } else {
+      setPriceMode('single');
+    }
+  }
+
+  function readPriceForm() {
+    var mode = 'single';
+    document.querySelectorAll('input[name="price-mode"]').forEach(function (r) {
+      if (r.checked) mode = r.value;
+    });
+    var digits = function (v) { return String(v || '').replace(/[^\d.]/g, ''); };
+
+    if (mode === 'range') {
+      var min = digits($('#f-price-min').value);
+      var max = digits($('#f-price-max').value);
+      if (min && max) return min + '-' + max;
+      return min || max || '';
+    }
+    if (mode === 'custom') return $('#f-price-text').value.trim();
+    return digits($('#f-price-num').value);
+  }
+
   function fillCategorySelect(select, selectedId) {
     select.textContent = '';
     var optNone = document.createElement('option');
@@ -276,7 +325,7 @@
     $('#f-id').value = p ? p.id : '';
     $('#f-name').value = p ? esc(p.name) : '';
     fillCategorySelect($('#f-category'), p ? p.category_id : '');
-    $('#f-price').value = p ? esc(p.price) : '';
+    fillPriceForm(p ? p.price : '');
     $('#f-description').value = p ? esc(p.description) : '';
     $('#f-link').value = p ? esc(p.link) : '';
     $('#f-image-url').value = p ? esc(p.image_url) : '';
@@ -303,7 +352,7 @@
     var payload = {
       name: $('#f-name').value.trim(),
       category_id: $('#f-category').value || null,
-      price: $('#f-price').value.trim(),
+      price: readPriceForm(),
       description: $('#f-description').value.trim(),
       link: $('#f-link').value.trim(),
       image_url: $('#f-image-url').value,
@@ -388,6 +437,69 @@
   htmlToMarkdown.looksRich = function (html) {
     return /<(img|a\b|b\b|strong|i\b|em|h[1-6]\b|ul\b|ol\b|blockquote|pre)\b/i.test(html);
   };
+
+  // ── 图片上传统一入口（按设置决定是否合成水印）──
+  // 浏览器端把站名水印烧进像素，作为展示图上传；原图以 orig 字段一并提交另存私有前缀
+  function compositeWatermark(file, text) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var c = document.createElement('canvas');
+          c.width = img.naturalWidth;
+          c.height = img.naturalHeight;
+          var ctx = c.getContext('2d');
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, c.width, c.height); // JPEG 无透明通道，铺白底
+          ctx.drawImage(img, 0, 0);
+
+          var fs = Math.max(18, Math.round(Math.max(c.width, c.height) / 18));
+          ctx.font = fs + 'px sans-serif';
+          ctx.fillStyle = 'rgba(255,255,255,0.30)';
+          ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+          ctx.lineWidth = 1;
+          ctx.rotate(-24 * Math.PI / 180);
+          var stepX = fs * 6.5, stepY = fs * 3.4;
+          for (var y = -c.height; y < c.height * 2; y += stepY) {
+            for (var x = -c.width; x < c.width * 2; x += stepX) {
+              ctx.fillText(text, x, y);
+              ctx.strokeText(text, x, y);
+            }
+          }
+          URL.revokeObjectURL(url);
+          c.toBlob(function (blob) {
+            resolve(blob && blob.size ? blob : null);
+          }, 'image/jpeg', 0.92);
+        } catch (e) { reject(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('图片读取失败')); };
+      img.src = url;
+    });
+  }
+
+  async function uploadImage(file) {
+    var wmOn = state.settings.watermark_on !== '0';
+    var text = (state.settings.site_name || '').trim() || 'lusiflowers';
+
+    if (wmOn && /^image\/(jpeg|png|webp|avif)$/.test(file.type)) {
+      try {
+        var blob = await compositeWatermark(file, text);
+        if (blob) {
+          var form = new FormData();
+          form.append('file', new File([blob], 'wm.jpg', { type: 'image/jpeg' }));
+          form.append('orig', file, file.name || 'orig');
+          return api('POST', '/api/upload', form, true);
+        }
+      } catch (e) {
+        console.error('水印合成失败，回退原图上传', e);
+      }
+    }
+
+    var form = new FormData();
+    form.append('file', file);
+    return api('POST', '/api/upload', form, true);
+  }
 
   // ── Markdown 描述编辑器 ───────────────
   var descEditor = {
@@ -526,9 +638,7 @@
           return;
         }
         var file = queue.shift();
-        var form = new FormData();
-        form.append('file', file);
-        api('POST', '/api/upload', form, true).then(function (data) {
+        uploadImage(file).then(function (data) {
           that.insertAtCursor('\n\n![图片](' + data.url + ')\n\n');
           next();
         }).catch(function (err) {
@@ -566,10 +676,7 @@
     var hint = $('#upload-hint');
     hint.textContent = '上传中，请稍候..';
 
-    var form = new FormData();
-    form.append('file', file);
-
-    api('POST', '/api/upload', form, true).then(function (data) {
+    uploadImage(file).then(function (data) {
       $('#f-image-url').value = data.url;
       updateImagePreview();
       hint.textContent = '上传成功';
@@ -683,6 +790,7 @@
   function fillSettingsForm(settings) {
     $('#set-site-name').value = settings.site_name || '';
     $('#set-announcement').value = settings.announcement || '';
+    $('#set-watermark').checked = settings.watermark_on !== '0';
   }
 
   $('#settings-form').addEventListener('submit', function (e) {
@@ -690,7 +798,11 @@
     api('PUT', '/api/settings', {
       site_name: $('#set-site-name').value.trim(),
       announcement: $('#set-announcement').value,
+      watermark_on: $('#set-watermark').checked ? '1' : '0',
     }).then(function () {
+      // 同步到本会话状态，立即影响后续上传
+      state.settings.watermark_on = $('#set-watermark').checked ? '1' : '0';
+      state.settings.site_name = $('#set-site-name').value.trim();
       $('#settings-hint').textContent = '已保存 ✓';
       setTimeout(function () { $('#settings-hint').textContent = ''; }, 2500);
     }).catch(function (err) { toast(err.message, true); });

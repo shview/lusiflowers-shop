@@ -404,3 +404,21 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
 }
 
 .md-preview del { text-decoration: line-through; color: var(--text-light); }
+
+/* ── 价格三模式 ───────────────────────── */
+.price-modes { display: flex; flex-direction: column; gap: 6px; }
+
+.price-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-light);
+  cursor: pointer;
+}
+
+.price-mode input[type="radio"] { margin: 0; }
+
+.price-num { width: 90px; padding: 5px 8px; font-size: 13px; }
+
+.price-mode .price-num:last-child { flex: 1; width: auto; }

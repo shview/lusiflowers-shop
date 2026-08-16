@@ -93,14 +93,18 @@ export async function onRequestDelete(context) {
   let removed = 0;
   const keys = extractImageKeys(product);
   if (keys.length && env.BUCKET) {
-    const doomed = [];
+    const doomed = new Set();
     for (const key of keys) {
       // 仍被其他商品引用的图片保留，避免误删共用图
-      if (!(await isReferencedElsewhere(env, key, id))) doomed.push(key);
+      if (!(await isReferencedElsewhere(env, key, id))) {
+        doomed.add(key);
+        // 对应的私有原图（水印模式下另存的 orig/ 前缀）一并清理
+        doomed.add(key.replace(/^images\//, 'orig/'));
+      }
     }
     // 尽力而为：清理失败不影响商品删除结果，仅留下孤儿文件
-    await Promise.allSettled(doomed.map(key => env.BUCKET.delete(key)));
-    removed = doomed.length;
+    await Promise.allSettled([...doomed].map(key => env.BUCKET.delete(key)));
+    removed = [...doomed].filter(k => k.startsWith('images/')).length;
   }
 
   return json({ ok: true, removed_images: removed });
