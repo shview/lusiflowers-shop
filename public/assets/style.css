@@ -569,3 +569,69 @@ main.container { flex: 1; padding-top: 20px; padding-bottom: 40px; }
 .view-lock-title { margin: 0; font-size: 18px; }
 .view-lock-desc { margin: 0; color: var(--text-light); font-size: 13px; }
 .view-lock-error { color: var(--accent); font-size: 13px; min-height: 18px; }
+
+/* ── 联系浮窗 ─────────────────────────── */
+.contact-fab {
+  position: fixed;
+  right: 22px;
+  bottom: 26px;
+  z-index: 90;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.contact-fab:hover { transform: scale(1.08); background: var(--accent-dark); }
+
+.contact-pop {
+  position: fixed;
+  right: 22px;
+  bottom: 92px;
+  z-index: 91;
+  width: 240px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  padding: 18px 16px 16px;
+  text-align: center;
+}
+
+.contact-close {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  border: none;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-light);
+  cursor: pointer;
+}
+
+.contact-title { font-weight: 700; margin-bottom: 10px; }
+
+.contact-qr {
+  width: 170px;
+  height: 170px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  margin-bottom: 10px;
+}
+
+.contact-text { font-size: 13px; color: var(--text-light); margin-bottom: 6px; white-space: pre-wrap; }
+.contact-text:empty { display: none; }
+
+.contact-pop .btn-detail-link { padding: 8px 20px; font-size: 14px; margin-top: 4px; }

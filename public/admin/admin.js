@@ -780,19 +780,25 @@
       });
       if (!files.length) return;
       var hint = this.hint;
-      hint.textContent = '上传中（' + files.length + ' 张）..';
+      var total = files.length;
+      var done = 0;
+      hint.textContent = total > 1
+        ? '批量上传中 0/' + total + ' ..'
+        : '上传中，请稍候..';
 
       var that = this;
       var queue = files.slice();
       (function next() {
         if (!queue.length) {
-          hint.textContent = '上传完成';
-          setTimeout(function () { if (hint.textContent === '上传完成') hint.textContent = ''; }, 2500);
+          hint.textContent = total > 1 ? '全部 ' + total + ' 张上传完成' : '上传完成';
+          setTimeout(function () { if (/上传完成/.test(hint.textContent)) hint.textContent = ''; }, 2500);
           return;
         }
         var file = queue.shift();
         uploadImage(file).then(function (data) {
           that.insertAtCursor('\n\n![图片](' + data.url + ')\n\n');
+          done++;
+          if (total > 1) hint.textContent = '批量上传中 ' + done + '/' + total + ' ..';
           next();
         }).catch(function (err) {
           hint.textContent = '上传失败：' + err.message;
@@ -969,6 +975,11 @@
     $('#set-watermark').checked = settings.watermark_on !== '0';
     $('#set-compress').checked = settings.compress_on === '1';
     $('#set-og').checked = settings.og_on === '1';
+    $('#set-contact-on').checked = settings.contact_on === '1';
+    $('#set-contact-text').value = settings.contact_text || '';
+    $('#set-contact-link').value = settings.contact_link || '';
+    contactQrPending = null;
+    updateContactQrPreview(settings.contact_img || '');
     $('#set-view-protect').checked = settings.view_protect === '1';
     $('#set-view-password').value = settings.view_password || '';
     $('#set-view-hours').value = String(settings.view_pw_hours || '0');
@@ -1005,6 +1016,36 @@
     toast('将恢复默认图标，记得点「保存设置」生效');
   });
 
+  // ── 联系浮窗二维码上传（不加水印）──────
+  var contactQrPending = null; // null=未改动；''=清除；其他=新图 URL
+
+  function updateContactQrPreview(url) {
+    var img = $('#contact-qr-preview');
+    if (url) { img.src = url; img.hidden = false; }
+    else { img.removeAttribute('src'); img.hidden = true; }
+  }
+
+  $('#btn-contact-qr').addEventListener('click', function () { $('#contact-qr-file').click(); });
+
+  $('#contact-qr-file').addEventListener('change', function () {
+    var file = this.files[0];
+    this.value = '';
+    if (!file || !/^image\//.test(file.type)) return;
+    var form = new FormData();
+    form.append('file', file);
+    api('POST', '/api/upload', form, true).then(function (data) {
+      contactQrPending = data.url;
+      updateContactQrPreview(data.url);
+      toast('二维码已上传，记得点「保存设置」生效');
+    }).catch(function (err) { toast(err.message, true); });
+  });
+
+  $('#btn-contact-qr-clear').addEventListener('click', function () {
+    contactQrPending = '';
+    updateContactQrPreview('');
+    toast('已清除二维码，记得点「保存设置」生效');
+  });
+
   $('#settings-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var faviconUrl = faviconPending !== null ? faviconPending : (state.settings.favicon_url || '');
@@ -1019,6 +1060,10 @@
       view_protect: $('#set-view-protect').checked ? '1' : '0',
       view_password: $('#set-view-password').value.trim(),
       view_pw_hours: String($('#set-view-hours').value || '0'),
+      contact_on: $('#set-contact-on').checked ? '1' : '0',
+      contact_img: contactQrPending !== null ? contactQrPending : (state.settings.contact_img || ''),
+      contact_text: $('#set-contact-text').value.trim(),
+      contact_link: $('#set-contact-link').value.trim(),
     }).then(function () {
       // 同步到本会话状态，立即影响后续上传
       state.settings.watermark_on = $('#set-watermark').checked ? '1' : '0';
@@ -1027,6 +1072,7 @@
       state.settings.home_title = $('#set-home-title').value.trim();
       state.settings.favicon_url = faviconUrl;
       faviconPending = null;
+      contactQrPending = null;
       // 重新拉取以显示最新访问码
       api('GET', '/api/settings').then(function (r) {
         state.settings = r.settings || state.settings;

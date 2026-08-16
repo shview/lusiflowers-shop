@@ -28,7 +28,8 @@ export async function onRequestPut(context) {
   if (!body || typeof body !== 'object') return json({ error: '请求格式错误' }, 400);
 
   const allowed = ['site_name', 'home_title', 'favicon_url', 'announcement', 'watermark_on', 'og_on',
-                   'view_protect', 'view_password', 'view_pw_hours', 'compress_on'];
+                   'view_protect', 'view_password', 'view_pw_hours', 'compress_on',
+                   'contact_on', 'contact_img', 'contact_text', 'contact_link'];
   const stmts = [];
   for (const [k, v] of Object.entries(body)) {
     if (!allowed.includes(k)) continue;

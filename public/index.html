@@ -19,7 +19,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/assets/style.css?v=9">
+  <link rel="stylesheet" href="/assets/style.css?v=10">
 </head>
 <body>
   <nav class="nav">
@@ -129,7 +129,16 @@
       <div class="view-lock-error" id="view-lock-error"></div>
     </form>
   </div>
-<script src="/assets/md.js?v=9"></script>
-  <script src="/assets/app.js?v=9"></script>
+  <!-- 联系浮窗（后台设置里开启） -->
+  <div class="contact-fab" id="contact-fab" hidden>💬</div>
+  <div class="contact-pop" id="contact-pop" hidden>
+    <button class="contact-close" id="contact-close" type="button" aria-label="关闭">×</button>
+    <div class="contact-title">联系咨询</div>
+    <img id="contact-qr" class="contact-qr" alt="二维码" hidden>
+    <div class="contact-text" id="contact-text"></div>
+    <a id="contact-link" class="btn-detail-link" target="_blank" rel="noopener" hidden></a>
+  </div>
+<script src="/assets/md.js?v=10"></script>
+  <script src="/assets/app.js?v=10"></script>
 </body>
 </html>

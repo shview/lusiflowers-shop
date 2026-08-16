@@ -45,6 +45,26 @@
       iconLink.href = new URL(state.settings.favicon_url, location.href).href;
     }
 
+    // 联系浮窗
+    var contactOn = state.settings.contact_on === '1' &&
+      !!(state.settings.contact_img || state.settings.contact_link || state.settings.contact_text);
+    $('#contact-fab').hidden = !contactOn;
+    if (contactOn) {
+      var qr = $('#contact-qr');
+      if (state.settings.contact_img) {
+        qr.src = new URL(state.settings.contact_img, location.href).href;
+        qr.hidden = false;
+      } else { qr.hidden = true; }
+
+      $('#contact-text').textContent = state.settings.contact_text || '';
+      var cLink = $('#contact-link');
+      if (state.settings.contact_link) {
+        cLink.href = state.settings.contact_link;
+        cLink.textContent = '点击咨询 →';
+        cLink.hidden = false;
+      } else { cLink.hidden = true; }
+    }
+
     var announceBtn = $('#btn-announce');
     var hasAnnouncement = !!(state.settings.announcement && state.settings.announcement.trim());
     announceBtn.hidden = !hasAnnouncement;
@@ -412,6 +432,21 @@
     applyTheme(next);
   });
   applyTheme(currentTheme());
+
+  // ── 联系浮窗事件 ───────────────────────
+  $('#contact-fab').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var pop = $('#contact-pop');
+    pop.hidden = !pop.hidden;
+  });
+  $('#contact-close').addEventListener('click', function () {
+    $('#contact-pop').hidden = true;
+  });
+  document.addEventListener('click', function (e) {
+    var pop = $('#contact-pop');
+    if (pop.hidden) return;
+    if (!pop.contains(e.target) && e.target !== $('#contact-fab')) pop.hidden = true;
+  });
 
   // ── 访问密码锁屏 ───────────────────────
   function showViewLock() {

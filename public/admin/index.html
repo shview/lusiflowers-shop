@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=10">
+  <link rel="stylesheet" href="/admin/admin.css?v=11">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -114,6 +114,28 @@
           </label>
 
           <div class="field">
+            <span class="field-label">联系浮窗（前台右下角咨询按钮）</span>
+            <label class="check-field"><input type="checkbox" id="set-contact-on"><span>开启浮窗</span></label>
+            <div class="upload-row" style="margin-top:8px">
+              <img id="contact-qr-preview" class="favicon-preview" alt="" hidden>
+              <div class="upload-ops">
+                <input type="file" id="contact-qr-file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" hidden>
+                <button type="button" class="btn" id="btn-contact-qr">上传二维码</button>
+                <button type="button" class="btn" id="btn-contact-qr-clear">清除二维码</button>
+                <div class="upload-hint">建议正方形二维码图片；不加水印</div>
+              </div>
+            </div>
+            <label class="field" style="margin-top:8px">
+              <span class="field-label">浮窗文案</span>
+              <input type="text" id="set-contact-text" class="input" placeholder="如：扫码加微信咨询选购">
+            </label>
+            <label class="field">
+              <span class="field-label">跳转链接（可选，访客点「点击咨询」打开）</span>
+              <input type="url" id="set-contact-link" class="input" placeholder="https://">
+            </label>
+          </div>
+
+          <div class="field">
             <span class="field-label">访问控制（公开前预览用）</span>
             <label class="check-field"><input type="checkbox" id="set-view-protect"><span>开启整站访问密码</span></label>
             <div class="field-row" style="margin-top:8px">
@@ -199,7 +221,7 @@
               <button type="button" class="md-btn" data-cmd="ul" title="列表">•</button>
               <button type="button" class="md-btn" data-cmd="link" title="插入链接">🔗</button>
               <button type="button" class="md-btn" data-cmd="image" title="插入图片">🖼</button>
-              <span class="md-toolbar-hint">图片也可直接拖入 / 粘贴</span>
+              <span class="md-toolbar-hint">支持多选/多张拖入/粘贴</span>
             </div>
             <textarea id="f-description" class="input md-textarea" rows="8" maxlength="5000" placeholder="描述内容…支持图文混排，把图片拖进这里即可上传"></textarea>
             <input type="file" id="f-desc-image-file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" multiple hidden>
@@ -253,7 +275,7 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="/assets/md.js?v=10"></script>
-  <script src="/admin/admin.js?v=10"></script>
+  <script src="/assets/md.js?v=11"></script>
+  <script src="/admin/admin.js?v=11"></script>
 </body>
 </html>
