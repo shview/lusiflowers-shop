@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品展示</title>
+  <meta name="description" content="">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="/" id="site-name">商品展示</a>
+      <div class="nav-right">
+        <a class="nav-link" href="/">购物</a>
+        <a class="nav-link" href="#announcement">公告</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <section class="announcement card" id="announcement" hidden>
+      <div class="announcement-title">公告</div>
+      <div class="announcement-body" id="announcement-body"></div>
+    </section>
+
+    <section class="tabs" id="tabs"></section>
+
+    <section class="products" id="products">
+      <div class="loading">努力加载中..</div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> <span id="footer-site-name"></span></span>
+    </div>
+  </footer>
+
+  <template id="tpl-product">
+    <div class="product-card card">
+      <a class="product-link" target="_blank" rel="noopener">
+        <div class="product-thumb">
+          <img loading="lazy" alt="">
+          <div class="product-noimg" hidden>暂无图片</div>
+        </div>
+        <div class="product-info">
+          <div class="product-name"></div>
+          <div class="product-desc"></div>
+          <div class="product-price-row">
+            <span class="product-price"></span>
+            <span class="product-buy">了解详情 →</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </template>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

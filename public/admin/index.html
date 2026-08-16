@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后台管理</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+  <!-- 登录视图 -->
+  <div id="view-login" class="login-wrap" hidden>
+    <form class="login-card card" id="login-form">
+      <h2 class="login-title">后台登录</h2>
+      <input type="password" id="login-password" class="input" placeholder="请输入管理密码" autocomplete="current-password" required>
+      <button type="submit" class="btn btn-primary btn-block" id="login-btn">登 录</button>
+      <div class="login-error" id="login-error"></div>
+    </form>
+  </div>
+
+  <!-- 管理视图 -->
+  <div id="view-admin" hidden>
+    <nav class="nav">
+      <div class="nav-inner">
+        <span class="nav-brand">后台管理</span>
+        <div class="nav-right">
+          <a class="nav-link" href="/" target="_blank">查看网站 ↗</a>
+          <a class="nav-link" href="javascript:void(0);" id="btn-logout">退出登录</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="admin-main container">
+      <div class="subtabs">
+        <button class="subtab active" data-pane="products">商品管理</button>
+        <button class="subtab" data-pane="categories">分类管理</button>
+        <button class="subtab" data-pane="settings">站点设置</button>
+      </div>
+
+      <!-- 商品管理 -->
+      <section class="pane" id="pane-products">
+        <div class="pane-head">
+          <h3>商品列表</h3>
+          <button class="btn btn-primary" id="btn-new-product">＋ 新增商品</button>
+        </div>
+        <div class="product-table card" id="product-list">
+          <div class="loading">加载中..</div>
+        </div>
+      </section>
+
+      <!-- 分类管理 -->
+      <section class="pane" id="pane-categories" hidden>
+        <div class="pane-head">
+          <h3>分类列表</h3>
+        </div>
+        <form class="cat-form card" id="cat-form">
+          <input type="text" id="cat-name" class="input" placeholder="新分类名称" required>
+          <button type="submit" class="btn btn-primary">添加分类</button>
+        </form>
+        <div class="cat-list card" id="cat-list"></div>
+      </section>
+
+      <!-- 站点设置 -->
+      <section class="pane" id="pane-settings" hidden>
+        <div class="pane-head">
+          <h3>站点设置</h3>
+        </div>
+        <form class="settings-form card" id="settings-form">
+          <label class="field">
+            <span class="field-label">网站名称</span>
+            <input type="text" id="set-site-name" class="input" placeholder="网站名称">
+          </label>
+          <label class="field">
+            <span class="field-label">公告内容（换行有效，可直接粘贴链接）</span>
+            <textarea id="set-announcement" class="input" rows="6" placeholder="公告内容"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">保存设置</button>
+            <span class="save-hint" id="settings-hint"></span>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <!-- 商品编辑弹窗 -->
+  <div class="modal-mask" id="product-modal" hidden>
+    <div class="modal card">
+      <div class="modal-head">
+        <h3 id="modal-title">新增商品</h3>
+        <button class="modal-close" id="modal-close">×</button>
+      </div>
+      <form id="product-form" class="modal-body">
+        <input type="hidden" id="f-id">
+        <label class="field">
+          <span class="field-label">商品名称 *</span>
+          <input type="text" id="f-name" class="input" required maxlength="100">
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">分类</span>
+            <select id="f-category" class="input"></select>
+          </label>
+          <label class="field">
+            <span class="field-label">价格（展示用文字，如 ¥99 / 免费咨询）</span>
+            <input type="text" id="f-price" class="input" maxlength="50">
+          </label>
+        </div>
+        <label class="field">
+          <span class="field-label">商品描述</span>
+          <textarea id="f-description" class="input" rows="4" maxlength="500" placeholder="卡片上展示的两行简介"></textarea>
+        </label>
+        <label class="field">
+          <span class="field-label">跳转链接（点击卡片后打开的网址，可留空）</span>
+          <input type="url" id="f-link" class="input" placeholder="https://">
+        </label>
+        <div class="field">
+          <span class="field-label">商品图片</span>
+          <div class="upload-row">
+            <div class="upload-preview" id="f-image-preview">无图片</div>
+            <div class="upload-ops">
+              <input type="file" id="f-image-file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" hidden>
+              <button type="button" class="btn" id="btn-upload">上传图片</button>
+              <button type="button" class="btn btn-danger-ghost" id="btn-remove-image">移除图片</button>
+              <div class="upload-hint" id="upload-hint">支持 JPG/PNG/GIF/WebP，10MB 以内</div>
+            </div>
+          </div>
+          <input type="hidden" id="f-image-url">
+        </div>
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">排序（数字越小越靠前）</span>
+            <input type="number" id="f-sort" class="input" value="0">
+          </label>
+          <label class="field check-field">
+            <input type="checkbox" id="f-visible" checked>
+            <span>在网站上显示</span>
+          </label>
+        </div>
+      </form>
+      <div class="modal-foot">
+        <button class="btn" id="modal-cancel">取消</button>
+        <button class="btn btn-primary" id="modal-save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="/admin/admin.js"></script>
+</body>
+</html>
