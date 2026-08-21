@@ -61,12 +61,13 @@ export async function onRequestPost(context) {
     }
   }
 
-  // 缩略图另存公开前缀（与展示图同名，卡片/网格加载小图省流量）
+  // 缩略图另存公开前缀（与展示图同名同扩展名，卡片/网格加载小图省流量）
   const thumb = form?.get('thumb');
   if (thumb && typeof thumb !== 'string' && /^image\//.test(thumb.type)) {
     const tCheck = checkImage(thumb);
     if (!tCheck.error) {
-      await env.BUCKET.put(`thumb/${hash}.${tCheck.ext}`, await thumb.arrayBuffer(), {
+      // 扩展名跟随展示图，保证 thumb/<hash>.<ext> 与 images/<hash>.<ext> 名称可互推
+      await env.BUCKET.put(`thumb/${hash}.${checked.ext}`, await thumb.arrayBuffer(), {
         httpMetadata: { contentType: thumb.type, cacheControl: 'public, max-age=31536000, immutable' },
       });
     }
