@@ -369,11 +369,6 @@ textarea.input { resize: vertical; }
 }
 
 /* ── 响应式 ───────────────────────────── */
-@media (max-width: 640px) {
-  .field-row { flex-direction: column; gap: 0; }
-  .prow-ops { flex-wrap: wrap; justify-content: flex-end; }
-  .prow-name { white-space: normal; }
-}
 
 /* ── 缺货徽标（商品行）───────────────── */
 .prow-badge.soldout-badge {
@@ -451,4 +446,46 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
   outline: 2px dashed var(--accent);
   outline-offset: 4px;
   border-radius: 10px;
+}
+
+/* ── 移动端适配（≤640px）──────────────── */
+@media (max-width: 640px) {
+  /* 商品行：信息一行 + 按钮换行铺满，互不遮挡 */
+  .prow { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+  .prow-thumb { width: 50px; height: 38px; }
+  .prow-main { flex: 1 1 calc(100% - 60px); min-width: 0; }
+  .prow-name { white-space: normal; font-size: 14px; }
+  .prow-ops { flex: 1 1 100%; justify-content: flex-start; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .prow-ops .btn { padding: 5px 10px; font-size: 12px; }
+
+  /* 列表头：筛选与新增按钮换行 */
+  .pane-head { flex-wrap: wrap; gap: 8px; }
+  .pane-head-ops { flex-wrap: wrap; width: 100%; justify-content: space-between; }
+  .pane-head-ops .btn { flex: 1; }
+
+  /* 子标签横滑，不折行 */
+  .subtabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .subtab { flex-shrink: 0; padding: 7px 14px; }
+
+  /* 编辑弹窗全宽、内边距收紧、底部按钮常驻 */
+  .modal-mask { padding: 16px 8px; align-items: stretch; }
+  .modal { width: 100%; display: flex; flex-direction: column; max-height: calc(100vh - 32px); overflow-y: auto; }
+  .modal-body { padding: 14px; }
+  .modal-foot { position: sticky; bottom: 0; background: var(--card-bg); }
+  .field-row { flex-direction: column; gap: 0; }
+
+  /* 价格三模式：每个模式独占一行，输入框自适应 */
+  .price-mode { width: 100%; flex-wrap: wrap; }
+  .price-mode .price-num { flex: 1; width: auto; min-width: 80px; }
+
+  /* 上传区与设置表单 */
+  .upload-row { flex-wrap: wrap; }
+  .upload-preview { width: 130px; height: 100px; }
+  .settings-form { padding: 14px; }
+  .md-textarea { min-height: 120px; }
+  .md-toolbar-hint { display: none; }
+
+  /* 分类表单与行 */
+  .cat-form { flex-wrap: wrap; }
+  .crow { flex-wrap: wrap; }
 }

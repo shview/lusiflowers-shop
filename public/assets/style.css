@@ -709,3 +709,35 @@ main.container { flex: 1; padding-top: 20px; padding-bottom: 40px; }
 }
 
 .sort-select:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── 移动端适配（≤640px）──────────────── */
+@media (max-width: 640px) {
+  /* 工具栏：分类标签横滑 + 排序独立一行 */
+  .list-tools { flex-direction: column; align-items: stretch; gap: 8px; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .tab { flex-shrink: 0; padding: 5px 13px; font-size: 13px; }
+  .sort-select { margin-left: 0; width: 100%; }
+
+  /* 详情弹窗全宽紧凑 */
+  .detail-mask { padding: 14px 6px; }
+  .detail { width: 100%; padding: 16px 12px; }
+  .detail-name { font-size: 18px; }
+  .carousel-stage { aspect-ratio: 4 / 3; max-height: 260px; }
+  .carousel-nav { width: 32px; height: 32px; font-size: 18px; }
+
+  /* 灯箱按钮触达 */
+  .lightbox-nav { width: 40px; height: 40px; }
+  .lightbox-close { font-size: 28px; }
+
+  /* 公告弹窗 */
+  .announce-card { width: 100%; }
+  .announce-body { padding: 16px 14px; }
+
+  /* 联系浮窗略缩、不挡内容 */
+  .contact-fab { right: 14px; bottom: 18px; width: 46px; height: 46px; font-size: 19px; }
+  .contact-pop { right: 14px; bottom: 74px; width: 220px; }
+  .contact-qr { width: 140px; height: 140px; }
+
+  /* 搜索栏 */
+  .searchbar { margin-bottom: 12px; }
+}
