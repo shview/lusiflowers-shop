@@ -562,3 +562,15 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
 }
 
 .orphan-legacy-row .key { flex: 1; word-break: break-all; }
+
+/* ── 孤儿图复选 ───────────────────────── */
+.orphan-cell { position: relative; cursor: pointer; }
+.orphan-cell.selected { outline: 2px solid var(--accent); outline-offset: -1px; }
+.orphan-check {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 18px;
+  height: 18px;
+  z-index: 2;
+}

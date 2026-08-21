@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=18">
+  <link rel="stylesheet" href="/admin/admin.css?v=19">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -177,6 +177,8 @@
           <button type="button" class="btn btn-primary" id="btn-export">导出数据（JSON）</button>
           <button type="button" class="btn" id="btn-scan-orphans" style="margin-left:8px">扫描未引用图片</button>
           <button type="button" class="btn btn-danger-ghost" id="btn-clean-orphans" style="margin-left:8px" hidden>清理</button>
+          <button type="button" class="btn" id="btn-orphan-selall" style="margin-left:8px" hidden>全选</button>
+          <button type="button" class="btn btn-danger-ghost" id="btn-orphan-delsel" style="margin-left:8px" hidden>删除选中 (0)</button>
           <div class="upload-hint" id="orphans-result" style="margin-top:8px"></div>
           <div class="orphan-grid" id="orphan-grid"></div>
           <div class="orphan-legacy-list" id="orphan-legacy-list"></div>
@@ -287,7 +289,7 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="/assets/md.js?v=18"></script>
-  <script src="/admin/admin.js?v=18"></script>
+  <script src="/assets/md.js?v=19"></script>
+  <script src="/admin/admin.js?v=19"></script>
 </body>
 </html>

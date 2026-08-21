@@ -1330,7 +1330,19 @@
     grid.textContent = '';
     orphanItems.forEach(function (it) {
       var cell = document.createElement('div');
-      cell.className = 'orphan-cell';
+      cell.className = 'orphan-cell' + (it.selected ? ' selected' : '');
+
+      var check = document.createElement('input');
+      check.type = 'checkbox';
+      check.className = 'orphan-check';
+      check.checked = !!it.selected;
+      check.addEventListener('click', function (e) { e.stopPropagation(); });
+      check.addEventListener('change', function () {
+        it.selected = check.checked;
+        cell.classList.toggle('selected', it.selected);
+        updateOrphanButtons();
+      });
+      cell.appendChild(check);
 
       var img = document.createElement('img');
       img.src = it.url;
@@ -1347,24 +1359,65 @@
       del.type = 'button';
       del.className = 'btn btn-sm btn-danger-ghost';
       del.textContent = '删除';
-      del.addEventListener('click', function () {
+      del.addEventListener('click', function (e) {
+        e.stopPropagation();
         if (!confirm('删除这张未引用图片？\n' + it.key)) return;
-        // 展示图与其同名原图（若存在）一起删；R2 删除不存在的 key 是无害空操作
         api('DELETE', '/api/images/orphans', { keys: [it.key, it.key.replace(/^images\//, 'orig/')] })
           .then(function () {
             orphanItems = orphanItems.filter(function (x) { return x.key !== it.key; });
             cell.remove();
             updateOrphanSummary();
+            updateOrphanButtons();
             toast('已删除');
           })
           .catch(function (err) { toast(err.message, true); });
       });
       cell.appendChild(del);
 
+      // 点卡片任意处切换选中（按钮/复选框除外）
+      cell.addEventListener('click', function () {
+        it.selected = !it.selected;
+        check.checked = it.selected;
+        cell.classList.toggle('selected', it.selected);
+        updateOrphanButtons();
+      });
+
       grid.appendChild(cell);
     });
+    updateOrphanButtons();
   }
 
+  function updateOrphanButtons() {
+    var selCount = orphanItems.filter(function (x) { return x.selected; }).length;
+    var has = orphanItems.length > 0;
+    $('#btn-orphan-selall').hidden = !has;
+    $('#btn-orphan-delsel').hidden = !has;
+    $('#btn-orphan-delsel').textContent = '删除选中 (' + selCount + ')';
+    $('#btn-orphan-selall').textContent = selCount === orphanItems.length && has ? '全不选' : '全选';
+  }
+
+  $('#btn-orphan-selall').addEventListener('click', function () {
+    var target = !orphanItems.every(function (x) { return x.selected; });
+    orphanItems.forEach(function (x) { x.selected = target; });
+    renderOrphanGrid();
+  });
+
+  $('#btn-orphan-delsel').addEventListener('click', function () {
+    var sel = orphanItems.filter(function (x) { return x.selected; });
+    if (!sel.length) { toast('先点选要删除的图片'); return; }
+    if (!confirm('删除选中的 ' + sel.length + ' 张未引用图片？此操作不可恢复。')) return;
+    var keys = [];
+    sel.forEach(function (it) {
+      keys.push(it.key);
+      keys.push(it.key.replace(/^images\//, 'orig/'));
+    });
+    api('DELETE', '/api/images/orphans', { keys: keys }).then(function (r) {
+      orphanItems = orphanItems.filter(function (x) { return !x.selected; });
+      renderOrphanGrid();
+      updateOrphanSummary();
+      toast('已删除 ' + r.deleted + ' 个文件');
+    }).catch(function (err) { toast(err.message, true); });
+  });
 
   function renderLegacyList() {
     var box = $('#orphan-legacy-list');
@@ -1398,6 +1451,7 @@
   function updateOrphanSummary() {
     var out = $('#orphans-result');
     $('#btn-clean-orphans').hidden = orphanItems.length === 0;
+    updateOrphanButtons();
     if (!orphanItems.length) {
       out.textContent = lastScanCleanText || '✓ 没有未引用的展示图';
       return;
@@ -1413,7 +1467,7 @@
     $('#btn-clean-orphans').hidden = true;
     api('GET', '/api/images/orphans').then(function (r) {
       orphanItems = (r.orphan_images || []).map(function (key) {
-        return { key: key, url: '/api/img/' + key, name: key.slice('images/'.length) };
+        return { key: key, url: '/api/img/' + key, name: key.slice('images/'.length), selected: false };
       });
       lastScanCleanText = '展示图 ' + r.images_total + ' 张，被引用 ' + r.referenced + ' 张；✓ 没有未引用的展示图';
       lastLegacyNote = r.legacy_note || '';
