@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=17">
+  <link rel="stylesheet" href="/admin/admin.css?v=18">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -179,6 +179,7 @@
           <button type="button" class="btn btn-danger-ghost" id="btn-clean-orphans" style="margin-left:8px" hidden>清理</button>
           <div class="upload-hint" id="orphans-result" style="margin-top:8px"></div>
           <div class="orphan-grid" id="orphan-grid"></div>
+          <div class="orphan-legacy-list" id="orphan-legacy-list"></div>
           <div class="upload-hint" style="margin-top:8px">
             导出全部商品、分类与设置为 JSON 文件留底。另外 D1 数据库自带「时间旅行」：
             过去 30 天内任意时间点的数据都可在 Cloudflare 控制台一键恢复，无需额外备份。
@@ -286,7 +287,7 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="/assets/md.js?v=17"></script>
-  <script src="/admin/admin.js?v=17"></script>
+  <script src="/assets/md.js?v=18"></script>
+  <script src="/admin/admin.js?v=18"></script>
 </body>
 </html>

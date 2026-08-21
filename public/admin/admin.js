@@ -550,12 +550,14 @@
     $('#upload-hint').textContent = '支持 JPG/PNG/GIF/WebP，10MB 以内';
     updateImagePreview();
     resetDescEditor();
+    sessionUploads = [];
     modalSnapshot = currentFormSnapshot();
     $('#product-modal').hidden = false;
   }
 
   // ── 未保存提醒：关闭前比对表单快照 ────
   var modalSnapshot = '';
+  var sessionUploads = []; // 本次弹窗会话上传的展示图 key
 
   function currentFormSnapshot() {
     return JSON.stringify({
@@ -571,10 +573,21 @@
     });
   }
 
+  // 回收本次会话上传且未被引用的图片（服务端二次校验引用，他商品在用会保留）
+  function recycleSessionUploads() {
+    if (!sessionUploads.length) return;
+    var keys = sessionUploads.slice();
+    sessionUploads = [];
+    api('POST', '/api/images/orphans', { keys: keys })
+      .then(function (r) { if (r.deleted > 0) toast('已自动清理 ' + r.deleted + ' 张未使用的图片'); })
+      .catch(function (err) { console.error('回收失败', err); });
+  }
+
   function closeProductModal(force) {
     if (!force && currentFormSnapshot() !== modalSnapshot) {
-      if (!confirm('有未保存的修改，确定关闭吗？')) return;
+      if (!confirm('有未保存的修改，确定关闭吗？\n刚上传但未使用的图片将自动回收。')) return;
     }
+    if (!force) recycleSessionUploads();
     $('#product-modal').hidden = true;
   }
 
@@ -606,6 +619,21 @@
 
     req.then(function () {
       toast('已保存');
+      // 本次会话上传、但最终未出现在表单里的图片（如换过主图）自动回收
+      var used = [payload.image_url].concat(
+        (payload.description.match(/!\[[^\]]*\]\(([^)\s]+)\)/g) || []).map(function (m) {
+          return (m.match(/\(([^)\s]+)\)$/)[1]);
+        })
+      );
+      var unused = sessionUploads.filter(function (key) {
+        return used.indexOf('/api/img/' + key) === -1;
+      });
+      if (unused.length) {
+        api('POST', '/api/images/orphans', { keys: unused })
+          .then(function (r) { if (r.deleted > 0) toast('已回收 ' + r.deleted + ' 张未使用图片'); })
+          .catch(function () {});
+      }
+      sessionUploads = [];
       modalSnapshot = currentFormSnapshot(); // 保存成功后再关，不触发提醒
       closeProductModal(true);
       loadAll();
@@ -950,6 +978,7 @@
         }
         var file = queue.shift();
         uploadImage(file).then(function (data) {
+          if (data.key) sessionUploads.push(data.key);
           that.insertAtCursor('\n\n![图片](' + data.url + ')\n\n');
           done++;
           if (total > 1) hint.textContent = '批量上传中 ' + done + '/' + total + ' ..';
@@ -990,6 +1019,7 @@
     hint.textContent = '上传中，请稍候..';
 
     uploadImage(file).then(function (data) {
+      if (data.key) sessionUploads.push(data.key);
       $('#f-image-url').value = data.url;
       updateImagePreview();
       hint.textContent = '上传成功';
@@ -1291,6 +1321,7 @@
 
   // ── 孤儿图片扫描与清理（缩略图列表 + 单删/全删）──
   var orphanItems = []; // [{key, url, name}]
+  var legacyOrphanKeys = []; // 旧格式残留原图 key
   var lastScanCleanText = '';
   var lastLegacyNote = '';
 
@@ -1334,6 +1365,36 @@
     });
   }
 
+
+  function renderLegacyList() {
+    var box = $('#orphan-legacy-list');
+    box.textContent = '';
+    legacyOrphanKeys.forEach(function (key) {
+      var row = document.createElement('div');
+      row.className = 'orphan-legacy-row';
+      var tag = document.createElement('span');
+      tag.textContent = '原图';
+      var k = document.createElement('span');
+      k.className = 'key';
+      k.textContent = key;
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn btn-sm btn-danger-ghost';
+      del.textContent = '删除';
+      del.addEventListener('click', function () {
+        if (!confirm('删除这个旧格式原图？\n' + key)) return;
+        api('DELETE', '/api/images/orphans', { keys: [key] }).then(function () {
+          legacyOrphanKeys = legacyOrphanKeys.filter(function (x) { return x !== key; });
+          row.remove();
+          updateOrphanSummary();
+          toast('已删除');
+        }).catch(function (err) { toast(err.message, true); });
+      });
+      row.appendChild(tag); row.appendChild(k); row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+
   function updateOrphanSummary() {
     var out = $('#orphans-result');
     $('#btn-clean-orphans').hidden = orphanItems.length === 0;
@@ -1342,6 +1403,7 @@
       return;
     }
     out.textContent = '未引用展示图 ' + orphanItems.length + ' 张（删除时同名原图一并清理）'
+      + (legacyOrphanKeys.length ? '；旧格式残留原图 ' + legacyOrphanKeys.length + ' 个' : '')
       + (lastLegacyNote ? '；' + lastLegacyNote : '');
   }
 
@@ -1355,7 +1417,9 @@
       });
       lastScanCleanText = '展示图 ' + r.images_total + ' 张，被引用 ' + r.referenced + ' 张；✓ 没有未引用的展示图';
       lastLegacyNote = r.legacy_note || '';
+      legacyOrphanKeys = (r.legacy_orphan_origs || []).slice();
       renderOrphanGrid();
+      renderLegacyList();
       updateOrphanSummary();
     }).catch(function (err) { out.textContent = '扫描失败：' + err.message; });
   });
@@ -1370,9 +1434,12 @@
       keys.push(it.key);
       keys.push(it.key.replace(/^images\//, 'orig/'));
     });
+    keys = keys.concat(legacyOrphanKeys);
     api('DELETE', '/api/images/orphans', { keys: keys }).then(function (r) {
       orphanItems = [];
+      legacyOrphanKeys = [];
       renderOrphanGrid();
+      renderLegacyList();
       out.textContent = '已清理 ' + r.deleted + ' 个文件';
       $('#btn-clean-orphans').hidden = true;
     }).catch(function (err) { out.textContent = '清理失败：' + err.message; });

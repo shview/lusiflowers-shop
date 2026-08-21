@@ -545,3 +545,20 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
   max-height: 2.6em;
   overflow: hidden;
 }
+
+/* ── 旧格式原图残留列表 ───────────────── */
+.orphan-legacy-list { margin-top: 8px; }
+
+.orphan-legacy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.orphan-legacy-row .key { flex: 1; word-break: break-all; }
