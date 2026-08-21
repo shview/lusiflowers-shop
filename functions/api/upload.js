@@ -43,7 +43,7 @@ export async function onRequestPost(context) {
     httpMetadata: { contentType: file.type, cacheControl: 'public, max-age=31536000, immutable' },
   });
 
-  // 原图另存私有前缀（内容一致时跳过，避免重复存储）
+  // 原图另存私有前缀，与展示图同名配对（删除/清理时按前缀替换即可找到）
   let origSaved = false;
   const orig = form?.get('orig');
   if (orig && typeof orig !== 'string' && /^image\//.test(orig.type)) {
@@ -52,7 +52,7 @@ export async function onRequestPost(context) {
       const oBuf = await orig.arrayBuffer();
       const oHash = (await sha256hex(oBuf)).slice(0, 16);
       if (oHash !== hash) {
-        await env.BUCKET.put(`orig/${oHash}.${oCheck.ext}`, oBuf, {
+        await env.BUCKET.put(`orig/${hash}.${oCheck.ext}`, oBuf, {
           httpMetadata: { contentType: orig.type },
         });
         origSaved = true;

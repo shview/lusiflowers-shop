@@ -1264,6 +1264,39 @@
     }).catch(function (err) { toast(err.message, true); });
   });
 
+  // ── 孤儿图片扫描与清理 ──────────────────
+  var orphanKeys = [];
+
+  $('#btn-scan-orphans').addEventListener('click', function () {
+    var out = $('#orphans-result');
+    out.textContent = '扫描中..';
+    $('#btn-clean-orphans').hidden = true;
+    api('GET', '/api/images/orphans').then(function (r) {
+      orphanKeys = (r.orphan_images || []).slice();
+      var lines = [];
+      lines.push('展示图 ' + r.images_total + ' 张，其中被商品引用 ' + r.referenced + ' 张');
+      if (r.orphan_images_total > 0) {
+        lines.push('未引用（可清理）：' + r.orphan_images_total + ' 张展示图' + (r.cleanable_total > r.orphan_images_total ? ' + ' + (r.cleanable_total - r.orphan_images_total) + ' 张配对原图' : ''));
+        $('#btn-clean-orphans').hidden = false;
+      } else {
+        lines.push('✓ 没有未引用的展示图');
+      }
+      if (r.legacy_note) lines.push(r.legacy_note);
+      out.textContent = lines.join('；');
+    }).catch(function (err) { out.textContent = '扫描失败：' + err.message; });
+  });
+
+  $('#btn-clean-orphans').addEventListener('click', function () {
+    if (!confirm('确定清理未引用的图片吗？此操作不可恢复（在售/隐藏商品的图片不受影响）。')) return;
+    var out = $('#orphans-result');
+    out.textContent = '清理中..';
+    api('DELETE', '/api/images/orphans', orphanKeys.length ? { keys: orphanKeys } : {}).then(function (r) {
+      out.textContent = '已清理 ' + r.deleted + ' 个文件';
+      $('#btn-clean-orphans').hidden = true;
+      orphanKeys = [];
+    }).catch(function (err) { out.textContent = '清理失败：' + err.message; });
+  });
+
   // ── 启动：探测会话 ─────────────────────
   fetch('/api/login', { method: 'GET' })
     .then(function (res) { res.ok ? showAdmin() : showLogin(); })

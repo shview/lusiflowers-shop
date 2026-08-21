@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=15">
+  <link rel="stylesheet" href="/admin/admin.css?v=16">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -51,12 +51,12 @@
       <section class="pane" id="pane-products">
         <div class="pane-head">
           <h3>商品列表</h3>
+          <button class="btn btn-primary" id="btn-new-product">＋ 新增商品</button>
           <div class="pane-head-ops">
-            <input type="search" id="admin-kw" class="input" style="width:140px" placeholder="搜索商品…" autocomplete="off">
+            <input type="search" id="admin-kw" class="input" style="width:150px" placeholder="搜索商品…" autocomplete="off">
             <select id="admin-cat-filter" class="input" style="width:auto" title="按分类筛选查看">
               <option value="all">全部分类</option>
             </select>
-            <button class="btn btn-primary" id="btn-new-product">＋ 新增商品</button>
           </div>
         </div>
         <div class="product-table card" id="product-list">
@@ -175,6 +175,9 @@
         </div>
         <div class="card" style="padding: 16px 20px">
           <button type="button" class="btn btn-primary" id="btn-export">导出数据（JSON）</button>
+          <button type="button" class="btn" id="btn-scan-orphans" style="margin-left:8px">扫描未引用图片</button>
+          <button type="button" class="btn btn-danger-ghost" id="btn-clean-orphans" style="margin-left:8px" hidden>清理</button>
+          <div class="upload-hint" id="orphans-result" style="margin-top:8px"></div>
           <div class="upload-hint" style="margin-top:8px">
             导出全部商品、分类与设置为 JSON 文件留底。另外 D1 数据库自带「时间旅行」：
             过去 30 天内任意时间点的数据都可在 Cloudflare 控制台一键恢复，无需额外备份。
@@ -282,7 +285,7 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="/assets/md.js?v=15"></script>
-  <script src="/admin/admin.js?v=15"></script>
+  <script src="/assets/md.js?v=16"></script>
+  <script src="/admin/admin.js?v=16"></script>
 </body>
 </html>
