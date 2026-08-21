@@ -489,3 +489,11 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
   .cat-form { flex-wrap: wrap; }
   .crow { flex-wrap: wrap; }
 }
+
+/* ── 触屏拖拽与长按高亮修复 ───────────── */
+.prow {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}

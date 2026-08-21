@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=14">
+  <link rel="stylesheet" href="/admin/admin.css?v=15">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -52,6 +52,7 @@
         <div class="pane-head">
           <h3>商品列表</h3>
           <div class="pane-head-ops">
+            <input type="search" id="admin-kw" class="input" style="width:140px" placeholder="搜索商品…" autocomplete="off">
             <select id="admin-cat-filter" class="input" style="width:auto" title="按分类筛选查看">
               <option value="all">全部分类</option>
             </select>
@@ -72,6 +73,7 @@
           <input type="text" id="cat-name" class="input" placeholder="新分类名称" required>
           <button type="submit" class="btn btn-primary">添加分类</button>
         </form>
+        <input type="search" id="cat-kw" class="input" style="margin-bottom:10px" placeholder="搜索分类…" autocomplete="off">
         <div class="cat-list card" id="cat-list"></div>
       </section>
 
@@ -280,7 +282,7 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="/assets/md.js?v=14"></script>
-  <script src="/admin/admin.js?v=14"></script>
+  <script src="/assets/md.js?v=15"></script>
+  <script src="/admin/admin.js?v=15"></script>
 </body>
 </html>

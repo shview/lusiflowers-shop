@@ -5,6 +5,17 @@
   var state = { categories: [], products: [], settings: {} };
   var dragRow = null;
 
+  // 价格展示格式化（与前台同规则）：纯数字加 ¥，"a-b" 展开为 ¥a - ¥b，其他原样
+  function formatPrice(raw) {
+    var s = String(raw || '').trim();
+    if (!s) return '';
+    var num = s.replace(/[¥￥,\s]/g, '');
+    if (/^\d+(\.\d+)?$/.test(num)) return '¥' + num;
+    var m = num.match(/^(\d+(?:\.\d+)?)\s*[-~]\s*(\d+(?:\.\d+)?)$/);
+    if (m) return '¥' + m[1] + ' - ¥' + m[2];
+    return s;
+  }
+
   // 清除所有拖拽指示线
   function clearDragHints() {
     document.querySelectorAll('#product-list .prow').forEach(function (r) {
@@ -13,7 +24,8 @@
     });
   }
 
-  // 容器级兜底：行间隙/列表边缘的拖放与拖拽结束，任何情况下都清理指示线
+  // 容器级兜底：行间隙/列表边缘的拖放与拖拽结束，任何情况下都清理指示线；
+  // 并实现触屏长按拖动排序（HTML5 DnD 在移动端不可用）
   function bindListDragFallback() {
     var list = $('#product-list');
     if (!list || list.dataset.dragBound) return;
@@ -21,6 +33,69 @@
     list.addEventListener('dragover', function (e) { e.preventDefault(); });
     list.addEventListener('drop', function (e) { e.preventDefault(); clearDragHints(); });
     list.addEventListener('dragend', function () { clearDragHints(); });
+
+    var touch = { active: false, row: null, target: null, before: false, startX: 0, startY: 0, timer: null };
+
+    function rowAt(x, y) {
+      var el = document.elementFromPoint(x, y);
+      return el && el.closest ? el.closest('#product-list .prow') : null;
+    }
+
+    list.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) return;
+      var t = e.touches[0];
+      var row = rowAt(t.clientX, t.clientY);
+      if (!row) return;
+      touch.startX = t.clientX;
+      touch.startY = t.clientY;
+      touch.row = row;
+      touch.target = null;
+      touch.timer = setTimeout(function () {
+        touch.active = true;
+        row.classList.add('dragging');
+        if (navigator.vibrate) { try { navigator.vibrate(20); } catch (err) { /* 忽略 */ } }
+      }, 280);
+    }, { passive: true });
+
+    list.addEventListener('touchmove', function (e) {
+      if (!touch.active) {
+        // 未进入拖拽模式先滑动 → 视为滚动，取消长按计时
+        var t = e.touches[0];
+        if (Math.abs(t.clientY - touch.startY) > 10 || Math.abs(t.clientX - touch.startX) > 10) {
+          clearTimeout(touch.timer);
+        }
+        return;
+      }
+      e.preventDefault(); // 拖拽中阻止页面滚动
+      var t = e.touches[0];
+      var row = rowAt(t.clientX, t.clientY);
+      clearDragHints();
+      touch.target = null;
+      if (row && row !== touch.row) {
+        var rect = row.getBoundingClientRect();
+        touch.before = t.clientY < rect.top + rect.height / 2;
+        touch.target = row;
+        if (touch.before) row.style.borderTop = '2px solid var(--accent)';
+        else row.style.borderBottom = '2px solid var(--accent)';
+      }
+    }, { passive: false });
+
+    function touchFinish() {
+      clearTimeout(touch.timer);
+      if (!touch.active) return;
+      touch.active = false;
+      var dragId = touch.row ? Number(touch.row.dataset.id) : 0;
+      if (touch.row) touch.row.classList.remove('dragging');
+      clearDragHints();
+      if (touch.target && dragId && touch.target !== touch.row) {
+        saveOrderFromDom(dragId, Number(touch.target.dataset.id), touch.before);
+      }
+      touch.row = null;
+      touch.target = null;
+    }
+
+    list.addEventListener('touchend', touchFinish);
+    list.addEventListener('touchcancel', touchFinish);
   }
 
   // 按 DOM 顺序重写全部商品的 sort（拖拽排序保存）——基于全局顺序，筛选状态下也正确
@@ -167,6 +242,12 @@
 
   // ── 商品列表 ───────────────────────────
   var adminCatFilter = 'all';
+  var adminKw = '';
+
+  $('#admin-kw').addEventListener('input', function () {
+    adminKw = this.value.trim().toLowerCase();
+    renderProductList();
+  });
 
   function fillCategoryFilter() {
     var sel = $('#admin-cat-filter');
@@ -203,13 +284,20 @@
     if (adminCatFilter !== 'all') {
       products = products.filter(function (p) { return String(p.category_id) === String(adminCatFilter); });
     }
+    if (adminKw) {
+      products = products.filter(function (p) {
+        var hay = (p.name || '') + '\n' + (p.description || '') + '\n' + (p.price || '');
+        return hay.toLowerCase().indexOf(adminKw) !== -1;
+      });
+    }
 
     if (!products.length) {
       var empty = document.createElement('div');
       empty.className = 'loading';
-      empty.textContent = adminCatFilter === 'all'
-        ? '还没有商品，点击右上角「新增商品」添加第一个吧'
-        : '该分类下还没有商品';
+      empty.textContent = adminKw ? '没有匹配的商品'
+        : (adminCatFilter === 'all'
+          ? '还没有商品，点击右上角「新增商品」添加第一个吧'
+          : '该分类下还没有商品');
       box.appendChild(empty);
       return;
     }
@@ -252,7 +340,7 @@
       var meta = document.createElement('div');
       meta.className = 'prow-meta';
       var catName = p.category_name || '未分类';
-      meta.textContent = catName + (p.price ? ' · ' + p.price : '') + ' · 排序 ' + p.sort
+      meta.textContent = catName + (p.price ? ' · ' + formatPrice(p.price) : '') + ' · 排序 ' + p.sort
         + ' · 浏览 ' + (p.views || 0);
       row.draggable = true;
       row.dataset.id = p.id;
@@ -941,19 +1029,32 @@
   });
 
   // ── 分类管理 ───────────────────────────
+  var catKw = '';
+  $('#cat-kw').addEventListener('input', function () {
+    catKw = this.value.trim().toLowerCase();
+    renderCategoryList();
+  });
+
   function renderCategoryList() {
     var box = $('#cat-list');
     box.textContent = '';
 
-    if (!state.categories.length) {
+    var cats = state.categories;
+    if (catKw) {
+      cats = cats.filter(function (c) {
+        return String(c.name || '').toLowerCase().indexOf(catKw) !== -1;
+      });
+    }
+
+    if (!cats.length) {
       var empty = document.createElement('div');
       empty.className = 'loading';
-      empty.textContent = '还没有分类';
+      empty.textContent = catKw ? '没有匹配的分类' : '还没有分类';
       box.appendChild(empty);
       return;
     }
 
-    state.categories.forEach(function (c) {
+    cats.forEach(function (c) {
       var count = state.products.filter(function (p) { return String(p.category_id) === String(c.id); }).length;
       var row = document.createElement('div');
       row.className = 'crow';
