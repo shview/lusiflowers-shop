@@ -1369,6 +1369,8 @@
 
   // ── 分类管理 ───────────────────────────
   var catKw = '';
+  var catExpanded = new Set();
+
   $('#cat-kw').addEventListener('input', function () {
     catKw = this.value.trim().toLowerCase();
     renderCategoryList();
@@ -1394,14 +1396,32 @@
     }
 
     cats.forEach(function (c) {
-      var count = state.products.filter(function (p) { return String(p.category_id) === String(c.id); }).length;
+      var prods = state.products.filter(function (p) {
+        return String(p.category_id) === String(c.id);
+      });
+
+      var wrap = document.createElement('div');
+      wrap.className = 'cat-item';
+
       var row = document.createElement('div');
       row.className = 'crow';
 
       var main = document.createElement('div');
       main.className = 'crow-main';
-      main.textContent = c.name + '（' + count + ' 个商品）';
+      main.textContent = c.name + '（' + prods.length + ' 个商品）';
       row.appendChild(main);
+
+      // 展开/收起
+      var expBtn = document.createElement('button');
+      expBtn.type = 'button';
+      expBtn.className = 'btn btn-sm';
+      expBtn.textContent = catExpanded.has(c.id) ? '▾ 收起' : '▸ 展开';
+      expBtn.addEventListener('click', function () {
+        if (catExpanded.has(c.id)) catExpanded.delete(c.id);
+        else catExpanded.add(c.id);
+        renderCategoryList();
+      });
+      row.appendChild(expBtn);
 
       var renameBtn = document.createElement('button');
       renameBtn.type = 'button';
@@ -1421,14 +1441,43 @@
       delBtn.className = 'btn btn-sm btn-danger-ghost';
       delBtn.textContent = '删除';
       delBtn.addEventListener('click', function () {
-        if (!confirm('确定删除分类「' + c.name + '」吗？分类下的 ' + count + ' 个商品会变为"未分类"，不会被删除。')) return;
+        if (!confirm('确定删除分类「' + c.name + '」吗？分类下的 ' + prods.length + ' 个商品会变为"未分类"，不会被删除。')) return;
         api('DELETE', '/api/categories/' + c.id)
           .then(function () { toast('已删除'); loadAll(); })
           .catch(function (err) { toast(err.message, true); });
       });
       row.appendChild(delBtn);
 
-      box.appendChild(row);
+      wrap.appendChild(row);
+
+      // 展开面板：类内商品清单，点击直接进编辑
+      if (catExpanded.has(c.id)) {
+        var panel = document.createElement('div');
+        panel.className = 'cat-prod-panel';
+        if (!prods.length) {
+          var em = document.createElement('div');
+          em.className = 'cat-prod-empty';
+          em.textContent = '该分类下暂无商品';
+          panel.appendChild(em);
+        }
+        prods.forEach(function (p) {
+          var pr = document.createElement('button');
+          pr.type = 'button';
+          pr.className = 'cat-prod-row';
+          var tags = [];
+          if (p.price) tags.push(formatPrice(p.price));
+          tags.push('浏览 ' + (p.views || 0));
+          if (!p.visible) tags.push('已隐藏');
+          if (p.sold_out) tags.push('缺货');
+          pr.textContent = p.name + ' · ' + tags.join(' · ');
+          pr.title = '编辑「' + p.name + '」';
+          pr.addEventListener('click', function () { openProductModal(p); });
+          panel.appendChild(pr);
+        });
+        wrap.appendChild(panel);
+      }
+
+      box.appendChild(wrap);
     });
   }
 

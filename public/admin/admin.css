@@ -663,3 +663,43 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
   font-size: 13px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
+
+/* ── 商品行紧凑化（v26）──────────────── */
+.prow { gap: 10px; padding: 8px 14px; }
+.prow-name { line-height: 1.35; }
+.prow-meta { line-height: 1.35; font-size: 12px; margin-top: 1px; }
+
+@media (max-width: 640px) {
+  /* 复选框悬浮右上角，不再挤占行内空间 */
+  .prow { position: relative; padding: 8px 30px 8px 10px; gap: 8px; }
+  .prow-check { position: absolute; right: 8px; top: 9px; }
+  .prow-ops { padding-right: 0; }
+}
+
+/* ── 分类展开面板（v26）──────────────── */
+.cat-item { border-bottom: 1px solid var(--border); }
+.cat-item:last-child { border-bottom: none; }
+.cat-item .crow { border-bottom: none; }
+
+.cat-prod-panel {
+  padding: 2px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cat-prod-row {
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.cat-prod-row:hover { border-color: var(--accent); color: var(--accent); }
+.cat-prod-empty { font-size: 12px; color: var(--text-light); padding: 2px 2px 6px; }
