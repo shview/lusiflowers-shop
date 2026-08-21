@@ -266,9 +266,12 @@
     if (!carousel.images.length) return;
     carousel.index = (carousel.index + delta + carousel.images.length) % carousel.images.length;
     renderCarousel();
+    preloadNextImage();
   }
 
-  function openDetail(p) {
+  var pushedDetail = false; // 是否由站内导航 pushState 到 /p/<id>
+
+  function openDetail(p, opts) {
     // 浏览计数（fire-and-forget，不阻塞展示）
     fetch('/api/products/' + p.id + '/view', { method: 'POST' }).catch(function () {});
 
@@ -292,12 +295,41 @@
 
     $('#detail-modal').hidden = false;
     document.documentElement.style.overflow = 'hidden';
+
+    // 站内打开时地址栏切换为直达链接（直达进入时不重复 push）
+    if (!opts || !opts.fromRoute) {
+      try { history.pushState({ detail: 1 }, '', '/p/' + p.id); pushedDetail = true; } catch (e) { /* 忽略 */ }
+    }
+    preloadNextImage();
+  }
+
+  // 预取下一张轮播图，翻页零等待
+  function preloadNextImage() {
+    if (carousel.images.length < 2) return;
+    var next = carousel.images[(carousel.index + 1) % carousel.images.length];
+    var im = new Image();
+    im.src = new URL(next, location.href).href;
   }
 
   function closeDetail() {
     $('#detail-modal').hidden = true;
     document.documentElement.style.overflow = '';
+    if (pushedDetail) {
+      pushedDetail = false;
+      try { history.back(); } catch (e) { /* 忽略 */ }
+    } else if (location.pathname.indexOf('/p/') === 0) {
+      try { history.replaceState({}, '', '/'); } catch (e) { /* 忽略 */ }
+    }
   }
+
+  // 浏览器后退关闭详情
+  window.addEventListener('popstate', function () {
+    if (pushedDetail) {
+      pushedDetail = false;
+      $('#detail-modal').hidden = true;
+      document.documentElement.style.overflow = '';
+    }
+  });
 
   // ── 灯箱（图片放大）─────────────────────
   var lightbox = { images: [], index: 0 };
@@ -322,6 +354,85 @@
     $('#lightbox-img').src = lightbox.images[lightbox.index];
     $('#lightbox-counter').textContent = (lightbox.index + 1) + ' / ' + lightbox.images.length;
   }
+
+
+  // ── 灯箱手势：单指滑动翻页、双指缩放、放大后单指平移、双击缩放 ──
+  (function () {
+    var box = $('#lightbox');
+    var img = $('#lightbox-img');
+    var st = { scale: 1, tx: 0, ty: 0 };
+    var start = null;      // 单指起点
+    var pinch0 = 0;        // 双指初始距离
+    var scale0 = 1;
+    var moved = false;
+
+    function apply() {
+      img.style.transform = 'translate(' + st.tx + 'px,' + st.ty + 'px) scale(' + st.scale + ')';
+    }
+    function reset() {
+      st = { scale: 1, tx: 0, ty: 0 };
+      img.style.transform = '';
+    }
+    function dist2(t) {
+      var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    box.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 1) {
+        start = { x: e.touches[0].clientX, y: e.touches[0].clientY, tx: st.tx, ty: st.ty };
+        moved = false;
+      } else if (e.touches.length === 2) {
+        pinch0 = dist2(e.touches);
+        scale0 = st.scale;
+        start = null;
+      }
+    }, { passive: true });
+
+    box.addEventListener('touchmove', function (e) {
+      if (e.touches.length === 2 && pinch0 > 0) {
+        e.preventDefault();
+        st.scale = Math.min(5, Math.max(1, scale0 * dist2(e.touches) / pinch0));
+        if (st.scale === 1) { st.tx = 0; st.ty = 0; }
+        apply();
+        moved = true;
+      } else if (e.touches.length === 1 && start && st.scale > 1) {
+        e.preventDefault();
+        st.tx = start.tx + (e.touches[0].clientX - start.x);
+        st.ty = start.ty + (e.touches[0].clientY - start.y);
+        apply();
+        moved = true;
+      } else if (e.touches.length === 1 && start) {
+        if (Math.abs(e.touches[0].clientX - start.x) > 12) moved = true;
+      }
+    }, { passive: false });
+
+    box.addEventListener('touchend', function (e) {
+      if (e.touches.length > 0) return;
+      if (start && !moved && st.scale === 1) {
+        var dx = e.changedTouches[0].clientX - start.x;
+        var dy = e.changedTouches[0].clientY - start.y;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+          lightboxStep(dx < 0 ? 1 : -1);
+          reset();
+        }
+      }
+      if (e.touches.length === 0) { pinch0 = 0; start = null; }
+    });
+
+    // 桌面双击缩放
+    img.addEventListener('dblclick', function (e) {
+      if (st.scale > 1) { reset(); return; }
+      st.scale = 2.5;
+      apply();
+    });
+
+    // 换图/打开/关闭时复位
+    var _open = openLightbox, _step = lightboxStep, _close = closeLightbox;
+    openLightbox = function (a, b) { reset(); return _open(a, b); };
+    lightboxStep = function (d) { reset(); return _step(d); };
+    closeLightbox = function () { reset(); return _close(); };
+  })();
 
   // 水印说明：展示图在上传时已由后台烧入像素水印，前台不再叠加 CSS 水印层
 
@@ -452,6 +563,16 @@
     }
   });
 
+
+  // ── 回到顶部 ─────────────────────────
+  var toTopBtn = $('#to-top');
+  window.addEventListener('scroll', function () {
+    toTopBtn.hidden = window.scrollY < 600;
+  }, { passive: true });
+  toTopBtn.addEventListener('click', function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
   // ── 主题切换（自动 → 亮 → 暗 循环）────
   var themeBtn = $('#theme-toggle');
   var THEME_ORDER = ['auto', 'light', 'dark'];
@@ -523,6 +644,14 @@
       renderTabs();
       renderProducts();
       maybeAutoShowAnnouncement();
+
+      // 直达链接：/p/<id> 自动打开对应商品
+      var dm = location.pathname.match(/^\/p\/(\d+)$/);
+      if (dm) {
+        var dp = state.products.find(function (x) { return String(x.id) === dm[1]; });
+        if (dp) openDetail(dp, { fromRoute: true });
+        else { try { history.replaceState({}, '', '/'); } catch (e) { /* 忽略 */ } }
+      }
     }).catch(function (err) {
       console.error(err);
       // 整站访问密码：数据接口返回 401 时显示锁屏

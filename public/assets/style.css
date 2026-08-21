@@ -741,3 +741,29 @@ main.container { flex: 1; padding-top: 20px; padding-bottom: 40px; }
   /* 搜索栏 */
   .searchbar { margin-bottom: 12px; }
 }
+
+/* ── 回到顶部 ─────────────────────────── */
+.to-top {
+  position: fixed;
+  right: 22px;
+  bottom: 92px;
+  z-index: 89;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: var(--card-bg);
+  color: var(--text-light);
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.to-top:hover { color: var(--accent); transform: translateY(-2px); }
+
+/* 灯箱图片变换（缩放/平移） */
+.lightbox img { touch-action: none; will-change: transform; }

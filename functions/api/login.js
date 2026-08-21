@@ -1,4 +1,4 @@
-import { makeSessionToken, json, COOKIE_NAME, isAuthed } from '../_lib/auth.js';
+import { makeSessionToken, json, isAuthed, cookieStr } from '../_lib/auth.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -26,7 +26,7 @@ export async function onRequestPost(context) {
 
   const token = await makeSessionToken(env.ADMIN_SESSION_SECRET);
   return json({ ok: true }, 200, {
-    'Set-Cookie': `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=43200`,
+    'Set-Cookie': cookieStr(token, 43200, request.url),
   });
 }
 

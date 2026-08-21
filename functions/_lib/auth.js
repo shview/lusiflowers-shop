@@ -49,3 +49,9 @@ export function json(data, status = 200, headers = {}) {
 }
 
 export { COOKIE_NAME };
+
+// Secure 标记仅在 https 下附加（本地 http 测试环境不支持 Secure Cookie）
+export function cookieStr(value, maxAge, requestUrl) {
+  const secure = String(requestUrl || "").startsWith("https") ? "; Secure" : "";
+  return `${COOKIE_NAME}=${value}; Path=/; HttpOnly;${secure}; SameSite=Strict; Max-Age=${maxAge}`;
+}

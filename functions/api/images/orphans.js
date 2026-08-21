@@ -12,7 +12,7 @@ async function listAll(env, prefix) {
   do {
     const page = await env.BUCKET.list({ prefix, cursor });
     for (const obj of page.objects || []) {
-      items.push({ key: obj.key, uploaded: obj.uploaded ? obj.uploaded.getTime() : 0 });
+      items.push({ key: obj.key, uploaded: obj.uploaded ? obj.uploaded.getTime() : 0, size: obj.size || 0 });
     }
     cursor = page.truncated ? page.cursor : undefined;
   } while (cursor);
@@ -20,11 +20,13 @@ async function listAll(env, prefix) {
 }
 
 async function scan(env) {
-  const [imageItems, origItems, refs] = await Promise.all([
+  const [imageItems, origItems, thumbItems, refs] = await Promise.all([
     listAll(env, 'images/'),
     listAll(env, 'orig/'),
+    listAll(env, 'thumb/'),
     referencedKeys(env),
   ]);
+  const bytesOf = arr => arr.reduce((a, b) => a + (b.size || 0), 0);
 
   const imageSet = new Set(imageItems.map(i => i.key));
   const orphanImages = imageItems.filter(i => !refs.has(i.key)).map(i => i.key);
@@ -58,7 +60,7 @@ async function scan(env) {
     else legacyOrphans.push(o.key);
   }
 
-  return { refs, imageItems, origItems, orphanImages, pairedOrphanOrigs, legacyPairs, legacyOrphans };
+  return { refs, imageItems, origItems, thumbItems, orphanImages, pairedOrphanOrigs, legacyPairs, legacyOrphans, bytesOf };
 }
 
 // GET：扫描并报告（不删除）
@@ -69,6 +71,9 @@ export async function onRequestGet(context) {
   return json({
     referenced: r.refs.size,
     images_total: r.imageItems.length,
+    images_bytes: r.bytesOf(r.imageItems),
+    orig_bytes: r.bytesOf(r.origItems),
+    thumb_bytes: r.bytesOf(r.thumbItems),
     orig_total: r.origItems.length,
     orphan_images_total: r.orphanImages.length,
     orphan_images: r.orphanImages,

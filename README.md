@@ -1,134 +1,113 @@
-# 商品展示站（Cloudflare Pages 全托管）
+# 商品展示网站（Cloudflare Pages + D1 + R2）
 
-一个零服务器、零持续成本的纯展示型商品网站。前台为发卡站式版式（导航 / 公告 / 分类 / 商品卡片），
-带一个完全网页操作的可视化后台，适合不会命令行的人日常维护。不涉及支付与订单。
+零服务器、零持续成本的商品展示站。前台复刻 shop.mhdy.net 的展示版式（导航 / 公告 / 分类标签 / 商品卡片），
+带一个完全网页操作的 `/admin` 后台，适合不会命令行的使用者日常维护。
 
-## 功能一览
-
-**前台**
-
-- 商品卡片网格、分类标签（带数量角标）、即时搜索、价格/上架时间正反排序
-- 商品详情弹窗：主图 + 描述图片自动轮播（箭头/圆点/键盘），点击全屏放大（灯箱）
-- 商品描述支持 Markdown 图文（安全渲染器，白名单标签）
-- 缺货状态：自动排到末尾、图片蒙灰加角标
-- 公告弹窗（首次访问或内容更新自动弹出一次）
-- 亮暗色主题：跟随系统自动切换 + 手动三档开关
-- 联系浮窗：右下角客服按钮 + 二维码/文案/跳转链接
-- 商品浏览量统计（打开详情即计数）
-- SEO/OG 分享卡片（可选，服务端注入站名/公告/首图）
-- 整站访问密码（可选）：固定或按 1/6/24/72 小时自动轮换的动态访问码
-
-**后台 `/admin`**（密码登录，HttpOnly Cookie 会话）
-
-- 商品增删改、复制、隐藏/显示、缺货标记、浏览量展示
-- 拖拽排序（全局顺序感知，筛选分类后拖拽不错乱）、上移/下移
-- 分类筛选查看类内排序；分类管理
-- 图片上传：主图/描述图/图标/二维码均支持按钮选择、拖拽、粘贴
-- Markdown 描述编辑器：工具栏 + 富文本粘贴自动转 MD + 实时预览 + 批量多图
-- 站点设置：站名、主页标题、网站图标、公告、水印/压图/OG/访问密码/联系浮窗开关
-- 数据导出 JSON
-
-**图片管线**
-
-- 上传即把站名水印烧进像素（可选，默认开），原图另存私有前缀不对外
-- 文件名 = 内容 SHA-256 前 16 位：同图同 URL，天然去重省存储
-- 可选自动压图（>1500px 等比缩到 1500px）
-- 删除商品联动清理展示图与原图（共享图保护，不误删他用图）
-
-## 技术架构
-
-```
-Cloudflare Pages（静态托管 + Pages Functions）
-├── public/            前台静态页 + 后台 SPA
-├── functions/         API 层（鉴权/商品/分类/设置/上传/导出/访问码）
-├── Cloudflare D1      商品/分类/设置（SQLite，自带 30 天时间旅行回档）
-└── Cloudflare R2      图片存储（images/ 公开前缀 + orig/ 私有前缀）
-```
-
-无构建步骤、无外部依赖，全站免费额度内运行。
-
-## 快速部署（复用指南）
-
-### 1. 准备资源（约 5 分钟，控制台点击）
-
-1. **D1 数据库**：控制台 → Storage & Databases → D1 → Create（名字随意，如 `shop`）
-   → 进入库 → Console 标签 → 粘贴执行 `schema.sql` 全部内容
-2. **R2 桶**：控制台 → R2 → Create bucket（保持私有即可，图片经 Functions 读取）
-3. **Pages 项目**：Fork 本仓库 → Workers & Pages → Create → Pages → Connect to Git
-   选择你的 fork，构建命令留空，输出目录 `public`
-
-### 2. 配置 wrangler.toml
-
-把仓库根目录 `wrangler.toml` 中的 `database_id`（D1 库概览页可复制）和 `bucket_name`
-换成你自己刚创建的值，提交推送。
-
-### 3. 设置环境变量
-
-Pages 项目 → Settings → Environment variables（Production）：
-
-| 变量 | 说明 |
-|---|---|
-| `ADMIN_PASSWORD` | 后台登录密码，自定强密码 |
-| `ADMIN_SESSION_SECRET` | 会话签名密钥，随机长字符串（如 32 位以上） |
-
-改完重新部署一次生效。
-
-### 4. 绑定域名（可选）
-
-Pages 项目 → Custom domains → 添加你的域名；DNS 在 Cloudflare 则零配置，
-在其他注册商把子域 CNAME 指向 `<项目名>.pages.dev`，裸域用注册商的转发跳到子域。
-
-### 5. 开始使用
-
-打开 `https://<项目名>.pages.dev/admin`，用 `ADMIN_PASSWORD` 登录，
-去「站点设置」改站名/图标/公告，然后新增第一个商品。日常操作见 [USAGE.md](USAGE.md)。
-
-## 本地开发
-
-```bash
-npx wrangler d1 execute shop-showcase --local --file=schema.sql
-npx wrangler pages dev
-```
-
-在项目根目录创建 `.dev.vars`（勿提交）：
-
-```
-ADMIN_PASSWORD=改成你自己的本地密码
-ADMIN_SESSION_SECRET=本地随机字符串
-```
-
-## 安全模型（渗透测试通过）
-
-- 后台写接口全部要求 HMAC 签名的 HttpOnly Cookie；伪造/篡改/路径变体/方法覆盖均无效
-- 管理密码与密钥只存于 Cloudflare 环境变量，仓库不含任何凭据
-- 描述渲染先整体转义再生成白名单标签，无 XSS 注入面；SQL 全参数化
-- 整站访问密码：8 位访问码（43 亿组合）+ 失败 800ms 延迟 + 改口令即全体失效
-- 开启访问密码时 OG 标签不输出，防抓取器绕过锁屏
-- 图片路由防路径穿越；上传仅收图片 MIME 且限 10MB
-
-## 备份
-
-- **D1 自带 Time Travel**：过去 30 天任意时间点可在控制台一键回档（免费、已内置）
-- 后台「站点设置 → 数据备份」可随时导出全部数据为 JSON
-- R2 图片高持久存储；可开启对象版本控制防误删
+- 前台：`/`（静态页，fetch API 渲染商品）
+- 后台：`/admin`（密码登录，商品增删改 / 图片上传 / 分类管理 / 公告与站名编辑）
+- 数据：Cloudflare D1（SQLite）
+- 图片：Cloudflare R2（后台上传，经 `/api/img/...` 公开访问，长缓存）
+- 鉴权：密码存 Cloudflare 环境变量，登录签发 HMAC 签名的 HttpOnly Cookie（12 小时有效）
 
 ## 目录结构
 
 ```
-public/               前台与后台静态资源（Pages 托管根目录）
-├── index.html        前台
-├── favicon.svg       默认网站图标（可在后台上传替换）
-├── assets/           前台 CSS/JS（md.js 为共享 Markdown 渲染器）
-├── admin/            后台 SPA
-└── _headers          缓存策略（HTML 每次校验，资源短缓存）
-functions/            Pages Functions API
-├── _lib/             鉴权 / 自动迁移 / 访问码
-├── api/              各接口
-└── index.js          首页 SEO/OG 注入
-schema.sql            D1 初始化脚本
-wrangler.toml         D1/R2 绑定配置（部署前换成自己的资源）
+shop-site/
+├── public/              静态资源（Pages 托管）
+│   ├── index.html       前台
+│   ├── assets/          前台 CSS/JS
+│   └── admin/           后台 SPA
+├── functions/           Pages Functions（API 层）
+│   ├── _lib/auth.js     会话签发与校验
+│   └── api/             login / products / categories / settings / upload / img
+├── schema.sql           D1 初始化脚本（部署时执行一次）
+├── wrangler.toml        Pages 配置（D1/R2 绑定）
+└── .dev.vars            本地开发密钥（勿提交，线上用控制台变量）
 ```
 
-## License
+## 本地开发
 
-MIT — 见 [LICENSE](LICENSE)
+```bash
+npm i -g wrangler        # 或用 npx
+npx wrangler d1 execute shop-showcase --local --file=schema.sql
+npx wrangler pages dev   # 默认 http://127.0.0.1:8787，读取 .dev.vars
+```
+
+`.dev.vars` 内容（本地测试用，自行修改）：
+
+```
+ADMIN_PASSWORD=test123456
+ADMIN_SESSION_SECRET=local-dev-secret-change-me
+```
+
+## 部署到 Cloudflare（约 15 分钟，全部在控制台点击完成）
+
+### 1. 创建 D1 数据库
+
+控制台 → Storage & Databases → D1 → Create database，名称 `shop-showcase`。
+创建后进入该库 → Console 标签 → 把 `schema.sql` 的内容粘贴进去 → Execute。
+
+记下库概览页的 **Database ID**，稍后填入 `wrangler.toml`。
+
+### 2. 创建 R2 存储桶
+
+控制台 → R2 → Create bucket，名称 `shop-showcase-images`（保持私有即可，
+图片通过 Functions 读取，无需开启公开访问）。
+
+> 首次使用 R2 可能要求先开通（免费，需绑卡但免费层内不扣费：
+> 10GB 存储 / 每月 A 类操作 100 万次 / B 类 1000 万次免费）。
+
+### 3. 创建 Pages 项目并上传代码
+
+最简单的方式：把 `shop-site/` 目录推到一个 **私有 GitHub 仓库**，
+然后控制台 → Workers & Pages → Create → Pages → Connect to Git，选中该仓库：
+
+- Build command：留空
+- Output directory：`public`
+
+也可以不接 Git：Workers & Pages → Create → Pages → Upload assets，直接拖 `public` 目录，
+然后在项目 Settings → Functions 里确保 `functions/` 目录随仓库存在（直传方式不带 Functions，
+**推荐用 Git 方式**）。
+
+### 4. 绑定 D1 与 R2
+
+Pages 项目 → Settings → Bindings：
+
+- Add → D1 database：Variable name 填 `DB`，选择 `shop-showcase`
+- Add → R2 bucket：Variable name 填 `BUCKET`，选择 `shop-showcase-images`
+
+同时把 `wrangler.toml` 中的 `database_id` 替换为第 1 步记下的真实 ID。
+
+### 5. 设置环境变量（后台密码）
+
+Pages 项目 → Settings → Environment variables：
+
+| 名称 | 值 | 说明 |
+|---|---|---|
+| `ADMIN_PASSWORD` | 自己想一个强密码 | 后台登录密码，随时可改 |
+| `ADMIN_SESSION_SECRET` | 一长串随机字符（如 32 位以上随机串） | 会话签名密钥，泄露等于密码泄露 |
+
+改完密码后需点 Deployments → 重新部署一次才会生效。
+
+### 6. 绑定域名
+
+Pages 项目 → Custom domains → Set up a custom domain → 输入你的域名。
+
+- 域名 DNS 在 Cloudflare：自动加记录，零配置
+- 域名 DNS 在别处：去域名商把 `www` 或 `@` 的 CNAME 指向 `<项目名>.pages.dev`
+
+### 7. 验证
+
+- 打开 `https://你的域名/` → 应显示默认公告与"推荐"分类
+- 打开 `https://你的域名/admin` → 用密码登录 → 新增第一个商品
+
+## 安全说明
+
+- 后台写操作全部要求有效会话 Cookie；密码错误有 300ms 延迟减缓爆破
+- 会话 Cookie：HttpOnly + Secure + SameSite=Strict，12 小时过期
+- 图片路由做了路径穿越过滤；上传仅收图片 MIME 且限 10MB
+- 前台渲染一律用 textContent，无 innerHTML，无 XSS 注入面
+
+## 日常使用
+
+见 [USAGE.md](USAGE.md)（交给使用者的图文操作指南）。

@@ -1,5 +1,6 @@
 import { json } from '../_lib/auth.js';
 import { effectiveViewCode, viewCookieToken } from '../_lib/viewcode.js';
+import { cookieStr } from '../_lib/auth.js';
 
 const COOKIE = 'shop_view';
 
@@ -47,8 +48,13 @@ export async function onRequestPost(context) {
 
   const token = await viewCookieToken(env.ADMIN_SESSION_SECRET, base);
   return json({ ok: true }, 200, {
-    'Set-Cookie': `${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`,
+    'Set-Cookie': viewCookieStr(token, request.url),
   });
 }
 
 export { COOKIE };
+
+function viewCookieStr(value, requestUrl) {
+  const secure = String(requestUrl || '').startsWith('https') ? '; Secure' : '';
+  return `shop_view=${value}; Path=/; HttpOnly;${secure}; SameSite=Lax; Max-Age=604800`;
+}

@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=21">
+  <link rel="stylesheet" href="/admin/admin.css?v=25">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -50,6 +50,19 @@
 
       <!-- 商品管理 -->
       <section class="pane" id="pane-products">
+        <div class="card report-card" id="report-card" hidden></div>
+        <div class="recent-bar" id="recent-bar" hidden>
+          <span class="recent-label">最近编辑：</span><span id="recent-chips"></span>
+        </div>
+        <div class="batch-bar card" id="batch-bar" hidden>
+          <span id="batch-count"></span>
+          <button type="button" class="btn btn-sm" id="batch-show">显示</button>
+          <button type="button" class="btn btn-sm" id="batch-hide">隐藏</button>
+          <select id="batch-cat" class="input" style="width:auto;padding:4px 8px"></select>
+          <button type="button" class="btn btn-sm" id="batch-cat-apply">改分类</button>
+          <button type="button" class="btn btn-sm btn-danger-ghost" id="batch-del">删除</button>
+          <button type="button" class="btn btn-sm" id="batch-clear">取消选择</button>
+        </div>
         <div class="pane-head">
           <h3>商品列表</h3>
           <button class="btn btn-primary" id="btn-new-product">＋ 新增商品</button>
@@ -315,11 +328,17 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-    <!-- 图片放大查看 -->
+    <!-- 删除撤销提示 -->
+  <div class="undo-toast" id="undo-toast" hidden>
+    <span id="undo-text"></span>
+    <button type="button" class="btn btn-sm" id="undo-btn">撤销</button>
+  </div>
+
+  <!-- 图片放大查看 -->
   <div class="lb-mask" id="admin-lb" hidden>
     <img id="admin-lb-img" alt="" draggable="false">
   </div>
-  <script src="/assets/md.js?v=21"></script>
-  <script src="/admin/admin.js?v=21"></script>
+  <script src="/assets/md.js?v=25"></script>
+  <script src="/admin/admin.js?v=25"></script>
 </body>
 </html>

@@ -16,6 +16,188 @@
     return s;
   }
 
+  // ── 复制链接 / 最近编辑 / 批量选择 ──
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy') ? resolve() : reject(new Error('复制失败')); } catch (e) { reject(e); }
+      ta.remove();
+    });
+  }
+
+  var recentIds = [];
+  try { recentIds = JSON.parse(localStorage.getItem('recent_products') || '[]'); } catch (e) { recentIds = []; }
+
+  function pushRecent(id) {
+    recentIds = [{ id: id, ts: Date.now() }].concat(recentIds.filter(function (r) { return r.id !== id; })).slice(0, 5);
+    try { localStorage.setItem('recent_products', JSON.stringify(recentIds)); } catch (e) { /* 忽略 */ }
+    renderRecent();
+  }
+
+  function renderRecent() {
+    var bar = $('#recent-bar');
+    if (!bar) return;
+    var chips = $('#recent-chips');
+    chips.textContent = '';
+    var list = recentIds.map(function (r) {
+      return state.products.find(function (p) { return p.id === r.id; });
+    }).filter(Boolean);
+    bar.hidden = list.length === 0;
+    list.forEach(function (p) {
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'recent-chip';
+      chip.textContent = p.name;
+      chip.addEventListener('click', function () { openProductModal(p); });
+      chips.appendChild(chip);
+    });
+  }
+
+  var batchSel = new Set();
+  function updateBatchBar() {
+    var bar = $('#batch-bar');
+    bar.hidden = batchSel.size === 0;
+    $('#batch-count').textContent = '已选 ' + batchSel.size + ' 项';
+    var sel = $('#batch-cat');
+    var cur = sel.value;
+    sel.textContent = '';
+    var opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '批量改分类为…';
+    sel.appendChild(opt);
+    state.categories.forEach(function (c) {
+      var o = document.createElement('option');
+      o.value = c.id;
+      o.textContent = c.name;
+      sel.appendChild(o);
+    });
+    if (cur) sel.value = cur;
+  }
+
+  function batchRun(fn) {
+    var ids = Array.from(batchSel);
+    if (!ids.length) return;
+    Promise.all(ids.map(fn))
+      .then(function () { toast('批量操作完成'); batchSel.clear(); loadAll(); })
+      .catch(function (err) { toast(err.message, true); loadAll(); });
+  }
+
+  function bindBatchUI() {
+  $('#batch-show').addEventListener('click', function () { batchRun(function (id) { return api('PUT', '/api/products/' + id, { visible: true }); }); });
+  $('#batch-hide').addEventListener('click', function () { batchRun(function (id) { return api('PUT', '/api/products/' + id, { visible: false }); }); });
+  $('#batch-cat-apply').addEventListener('click', function () {
+    var cat = $('#batch-cat').value;
+    if (!cat) { toast('先选择目标分类'); return; }
+    batchRun(function (id) { return api('PUT', '/api/products/' + id, { category_id: Number(cat) }); });
+  });
+  $('#batch-del').addEventListener('click', function () {
+    var n = batchSel.size;
+    if (!n || !confirm('删除选中的 ' + n + ' 个商品？删除后无法逐个撤销（批量场景请确认清楚）。')) return;
+    batchRun(function (id) { return api('DELETE', '/api/products/' + id); });
+  });
+  $('#batch-clear').addEventListener('click', function () {
+    batchSel.clear();
+    document.querySelectorAll('#product-list .prow').forEach(function (r) {
+      var cb = r.querySelector('.prow-check'); if (cb) cb.checked = false;
+    });
+    updateBatchBar();
+  });
+
+  }
+
+  // ── 删除撤销（30 秒窗口）──
+  var undoTimers = {};
+  function deleteWithUndo(p) {
+    if (!confirm('确定删除商品「' + p.name + '」吗？30 秒内可撤销。')) return;
+    var wasVisible = !!p.visible;
+    api('DELETE', '/api/products/' + p.id).then(function () {
+      var snapshot = {
+        id: p.id, name: p.name, category_id: p.category_id, price: p.price,
+        description: p.description, image_url: p.image_url, link: p.link,
+        sort: p.sort, visible: wasVisible, sold_out: !!p.sold_out,
+      };
+      loadAll();
+      startUndoWindow(snapshot);
+    }).catch(function (err) { toast(err.message, true); });
+  }
+
+  function startUndoWindow(snapshot) {
+    if (undoTimers[snapshot.id]) clearTimeout(undoTimers[snapshot.id]);
+    var left = 30;
+    var box = $('#undo-toast'), txt = $('#undo-text');
+    box.hidden = false;
+    txt.textContent = '「' + snapshot.name + '」已删除（' + left + 's）';
+    var tick = setInterval(function () {
+      left--;
+      if (left <= 0) { clearInterval(tick); box.hidden = true; return; }
+      txt.textContent = '「' + snapshot.name + '」已删除（' + left + 's）';
+    }, 1000);
+    undoTimers[snapshot.id] = setTimeout(function () {
+      clearInterval(tick);
+      box.hidden = true;
+      delete undoTimers[snapshot.id];
+    }, 30000);
+    $('#undo-btn').onclick = function () {
+      clearInterval(tick);
+      clearTimeout(undoTimers[snapshot.id]);
+      delete undoTimers[snapshot.id];
+      box.hidden = true;
+      api('POST', '/api/products', snapshot).then(function () {
+        toast('已撤销删除');
+        loadAll();
+      }).catch(function (err) {
+        toast('撤销失败：' + err.message, true);
+      });
+    };
+  }
+
+  // ── 浏览报表 ──
+  function loadReport() {
+    api('GET', '/api/report').then(renderReport).catch(function () {});
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderReport(r) {
+    var card = $('#report-card');
+    if (!card) return;
+    var hasViews = (r.top || []).some(function (t) { return t.views > 0; });
+    var hasTrend = (r.trend || []).length > 0;
+    card.hidden = !hasViews && !hasTrend;
+    if (card.hidden) return;
+
+    var byDay = {};
+    (r.trend || []).forEach(function (t) { byDay[t.day] = t.v; });
+    var days = [], vals = [];
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(Date.now() - i * 86400000);
+      var key = d.toISOString().slice(0, 10);
+      days.push(key.slice(5));
+      vals.push(byDay[key] || 0);
+    }
+    var max = Math.max.apply(null, vals.concat([1]));
+
+    var h = '<div class="report-title">浏览统计</div><div class="report-top">';
+    (r.top || []).forEach(function (t, i) {
+      h += '<div class="report-row"><span class="report-rank">' + (i + 1) + '</span>'
+        + '<span class="report-name">' + escapeHtml(t.name) + '</span>'
+        + '<span class="report-views">' + t.views + ' 次</span></div>';
+    });
+    h += '</div><div class="report-trend">';
+    vals.forEach(function (v, i) {
+      h += '<div class="report-col"><div class="report-bar" style="height:' + Math.max(2, Math.round(v / max * 46)) + 'px" title="' + v + ' 次"></div>'
+        + '<div class="report-day">' + days[i] + '</div></div>';
+    });
+    h += '</div>';
+    card.innerHTML = h;
+  }
+
   // 清除所有拖拽指示线
   function clearDragHints() {
     document.querySelectorAll('#product-list .prow').forEach(function (r) {
@@ -238,6 +420,8 @@
       renderCategoryList();
       fillSettingsForm(state.settings);
       renderImagesPane();
+      renderRecent();
+      loadReport();
       api('GET', '/api/images/orphans').then(updateImgStats).catch(function () {});
     }).catch(function (err) { toast(err.message, true); });
   }
@@ -307,6 +491,18 @@
     products.forEach(function (p) {
       var row = document.createElement('div');
       row.className = 'prow';
+
+      var check = document.createElement('input');
+      check.type = 'checkbox';
+      check.className = 'prow-check';
+      check.checked = batchSel.has(p.id);
+      check.title = '批量选择';
+      check.addEventListener('click', function (e) { e.stopPropagation(); });
+      check.addEventListener('change', function () {
+        if (check.checked) batchSel.add(p.id); else batchSel.delete(p.id);
+        updateBatchBar();
+      });
+      row.appendChild(check);
 
       var thumb = document.createElement('div');
       thumb.className = 'prow-thumb';
@@ -391,12 +587,12 @@
         }).catch(function (err) { toast(err.message, true); });
       });
       opBtn('编辑', function () { openProductModal(p); });
-      opBtn('删除', function () {
-        if (!confirm('确定删除商品「' + p.name + '」吗？此操作不可恢复。')) return;
-        api('DELETE', '/api/products/' + p.id)
-          .then(function () { toast('已删除'); loadAll(); })
-          .catch(function (err) { toast(err.message, true); });
+      opBtn('复制链接', function () {
+        copyText(location.origin + '/p/' + p.id)
+          .then(function () { toast('链接已复制：/p/' + p.id); })
+          .catch(function () { toast('复制失败', true); });
       });
+      opBtn('删除', function () { deleteWithUndo(p); });
 
       row.appendChild(ops);
 
@@ -554,7 +750,73 @@
     resetDescEditor();
     sessionUploads = [];
     modalSnapshot = currentFormSnapshot();
+    if (p) pushRecent(p.id);
+    maybeRestoreDraft(p);
     $('#product-modal').hidden = false;
+  }
+
+
+  // ── 草稿箱 ─────────────────────────────
+  function draftKey(p) { return p ? 'draft_edit_' + p.id : 'draft_new'; }
+
+  function saveDraft() {
+    var data = {
+      name: $('#f-name').value,
+      cat: $('#f-category').value,
+      price: readPriceForm(),
+      desc: $('#f-description').value,
+      link: $('#f-link').value,
+      img: $('#f-image-url').value,
+      sort: $('#f-sort').value,
+      vis: $('#f-visible').checked,
+      so: $('#f-soldout').checked,
+    };
+    var key = draftKey($('#f-id').value ? { id: Number($('#f-id').value) } : null);
+    try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) { /* 忽略 */ }
+  }
+
+  var draftTimer = null;
+  document.addEventListener('input', function (e) {
+    if (!e.target.closest || !e.target.closest('#product-form')) return;
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 500);
+  });
+  document.addEventListener('change', function (e) {
+    if (!e.target.closest || !e.target.closest('#product-form')) return;
+    saveDraft();
+  });
+
+  function applyDraft(d) {
+    $('#f-name').value = d.name || '';
+    fillPriceForm(d.price || '');
+    $('#f-category').value = d.cat || '';
+    $('#f-description').value = d.desc || '';
+    $('#f-link').value = d.link || '';
+    $('#f-image-url').value = d.img || '';
+    $('#f-sort').value = d.sort || '0';
+    $('#f-visible').checked = d.vis !== false;
+    $('#f-soldout').checked = !!d.so;
+    updateImagePreview();
+    resetDescEditor();
+  }
+
+  function clearDraft(p) {
+    try { localStorage.removeItem(draftKey(p)); } catch (e) { /* 忽略 */ }
+  }
+
+  function maybeRestoreDraft(p) {
+    var raw = null;
+    try { raw = localStorage.getItem(draftKey(p)); } catch (e) { return; }
+    if (!raw) return;
+    var d;
+    try { d = JSON.parse(raw); } catch (e) { clearDraft(p); return; }
+    if (!d) return;
+    if (confirm('检测到未保存的草稿，恢复吗？\n（选「取消」则丢弃草稿）')) {
+      applyDraft(d);
+      toast('草稿已恢复');
+    } else {
+      clearDraft(p);
+    }
   }
 
   // ── 未保存提醒：关闭前比对表单快照 ────
@@ -587,7 +849,8 @@
 
   function closeProductModal(force) {
     if (!force && currentFormSnapshot() !== modalSnapshot) {
-      if (!confirm('有未保存的修改，确定关闭吗？\n刚上传但未使用的图片将自动回收。')) return;
+      if (!confirm('有未保存的修改，确定关闭吗？\n草稿与刚上传但未使用的图片将被清理。')) return;
+      clearDraft($('#f-id').value ? { id: Number($('#f-id').value) } : null);
     }
     if (!force) recycleSessionUploads();
     $('#product-modal').hidden = true;
@@ -621,6 +884,7 @@
 
     req.then(function () {
       toast('已保存');
+      clearDraft(id ? { id: Number(id) } : null);
       // 本次会话上传、但最终未出现在表单里的图片（如换过主图）自动回收
       var used = [payload.image_url].concat(
         (payload.description.match(/!\[[^\]]*\]\(([^)\s]+)\)/g) || []).map(function (m) {
@@ -1540,9 +1804,11 @@
   function updateImgStats(r) {
     var el = $('#img-stats');
     if (!el) return;
-    el.textContent = '展示图 ' + r.images_total + ' 张（被引用 ' + r.referenced + '）· '
-      + '原图 ' + (r.orig_total != null ? r.orig_total : '—') + ' 张 · '
-      + '未引用 ' + r.orphan_images_total + ' 张'
+    var mb = function (b) { return b == null ? '' : (b / 1048576).toFixed(1) + 'MB'; };
+    el.textContent = '展示图 ' + r.images_total + ' 张·' + mb(r.images_bytes) + '（被引用 ' + r.referenced + '）· '
+      + '原图 ' + (r.orig_total != null ? r.orig_total : '—') + ' 张·' + mb(r.orig_bytes)
+      + ' · 缩略图·' + mb(r.thumb_bytes)
+      + ' · 未引用 ' + r.orphan_images_total + ' 张'
       + (r.legacy_note ? '；' + r.legacy_note : '');
   }
 
@@ -1727,6 +1993,8 @@
     }).catch(function (err) { out.textContent = '清理失败：' + err.message; });
   });
 
+
+  bindBatchUI();
 
   // ── 启动：探测会话 ─────────────────────
   fetch('/api/login', { method: 'GET' })

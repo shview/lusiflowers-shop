@@ -8,6 +8,15 @@ const COLUMNS = [
   `ALTER TABLE products ADD COLUMN views INTEGER NOT NULL DEFAULT 0`,
 ];
 
+const TABLES = [
+  `CREATE TABLE IF NOT EXISTS product_views_daily (
+    product_id INTEGER NOT NULL,
+    day TEXT NOT NULL,
+    views INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (product_id, day)
+  )`,
+];
+
 export async function ensureSchema(env) {
   if (migrated || !env.DB) return;
   try {
@@ -17,6 +26,14 @@ export async function ensureSchema(env) {
       } catch (e) {
         const msg = String(e.message || '');
         if (!msg.includes('duplicate column')) throw e;
+      }
+    }
+    for (const sql of TABLES) {
+      try {
+        await env.DB.prepare(sql).run();
+      } catch (e) {
+        const msg = String(e.message || '');
+        if (!msg.includes('already exists')) throw e;
       }
     }
     migrated = true;
