@@ -512,3 +512,36 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
   .pane-head-ops #admin-kw { flex: 1; width: auto; }
   .pane-head-ops #admin-cat-filter { flex: 0 0 auto; }
 }
+
+/* ── 孤儿图片网格 ─────────────────────── */
+.orphan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.orphan-cell {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  background: var(--panel);
+}
+
+.orphan-cell img {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--thumb-bg);
+}
+
+.orphan-name {
+  font-size: 11px;
+  color: var(--text-light);
+  margin: 6px 0 6px;
+  word-break: break-all;
+  max-height: 2.6em;
+  overflow: hidden;
+}

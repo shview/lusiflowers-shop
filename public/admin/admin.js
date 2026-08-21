@@ -783,6 +783,28 @@
     return api('POST', '/api/upload', form, true);
   }
 
+  // 若光标处于某个 ![...](...) / [...](...) 记号内部，返回该记号结束后的安全插入位置
+  function safeInsertPos(value, pos) {
+    function insideToken(openIdx, markerLen) {
+      if (openIdx === -1) return -1;
+      var close = value.indexOf(')', openIdx);
+      // 记号未闭合时不调整（无法判定边界，维持原位）
+      if (close === -1) return -1;
+      if (pos > openIdx && pos <= close) return close + 1;
+      return -1;
+    }
+    // 图片记号 ![...](...)
+    var imgOpen = value.lastIndexOf('![', pos);
+    var r = insideToken(imgOpen, 2);
+    if (r !== -1) return r;
+    // 普通链接 [...](...)（跳过属于图片的 '['）
+    var linkOpen = value.lastIndexOf('[', pos);
+    if (linkOpen > 0 && value.charAt(linkOpen - 1) === '!') linkOpen = -1;
+    r = insideToken(linkOpen, 1);
+    if (r !== -1) return r;
+    return pos;
+  }
+
   // ── Markdown 描述编辑器 ───────────────
   var descEditor = {
     textarea: null,
@@ -864,6 +886,9 @@
     insertAtCursor: function (text) {
       var ta = this.textarea;
       var start = ta.selectionStart, end = ta.selectionEnd;
+      // 光标落在已有图片/链接 Markdown 记号内部时，插入点移到该记号之后，避免破坏语法
+      start = safeInsertPos(ta.value, start);
+      end = Math.max(end, start);
       ta.value = ta.value.slice(0, start) + text + ta.value.slice(end);
       var pos = start + text.length;
       ta.focus();
@@ -1264,38 +1289,95 @@
     }).catch(function (err) { toast(err.message, true); });
   });
 
-  // ── 孤儿图片扫描与清理 ──────────────────
-  var orphanKeys = [];
+  // ── 孤儿图片扫描与清理（缩略图列表 + 单删/全删）──
+  var orphanItems = []; // [{key, url, name}]
+  var lastScanCleanText = '';
+  var lastLegacyNote = '';
+
+  function renderOrphanGrid() {
+    var grid = $('#orphan-grid');
+    grid.textContent = '';
+    orphanItems.forEach(function (it) {
+      var cell = document.createElement('div');
+      cell.className = 'orphan-cell';
+
+      var img = document.createElement('img');
+      img.src = it.url;
+      img.alt = it.name;
+      img.loading = 'lazy';
+      cell.appendChild(img);
+
+      var name = document.createElement('div');
+      name.className = 'orphan-name';
+      name.textContent = it.name;
+      cell.appendChild(name);
+
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn btn-sm btn-danger-ghost';
+      del.textContent = '删除';
+      del.addEventListener('click', function () {
+        if (!confirm('删除这张未引用图片？\n' + it.key)) return;
+        // 展示图与其同名原图（若存在）一起删；R2 删除不存在的 key 是无害空操作
+        api('DELETE', '/api/images/orphans', { keys: [it.key, it.key.replace(/^images\//, 'orig/')] })
+          .then(function () {
+            orphanItems = orphanItems.filter(function (x) { return x.key !== it.key; });
+            cell.remove();
+            updateOrphanSummary();
+            toast('已删除');
+          })
+          .catch(function (err) { toast(err.message, true); });
+      });
+      cell.appendChild(del);
+
+      grid.appendChild(cell);
+    });
+  }
+
+  function updateOrphanSummary() {
+    var out = $('#orphans-result');
+    $('#btn-clean-orphans').hidden = orphanItems.length === 0;
+    if (!orphanItems.length) {
+      out.textContent = lastScanCleanText || '✓ 没有未引用的展示图';
+      return;
+    }
+    out.textContent = '未引用展示图 ' + orphanItems.length + ' 张（删除时同名原图一并清理）'
+      + (lastLegacyNote ? '；' + lastLegacyNote : '');
+  }
 
   $('#btn-scan-orphans').addEventListener('click', function () {
     var out = $('#orphans-result');
     out.textContent = '扫描中..';
     $('#btn-clean-orphans').hidden = true;
     api('GET', '/api/images/orphans').then(function (r) {
-      orphanKeys = (r.orphan_images || []).slice();
-      var lines = [];
-      lines.push('展示图 ' + r.images_total + ' 张，其中被商品引用 ' + r.referenced + ' 张');
-      if (r.orphan_images_total > 0) {
-        lines.push('未引用（可清理）：' + r.orphan_images_total + ' 张展示图' + (r.cleanable_total > r.orphan_images_total ? ' + ' + (r.cleanable_total - r.orphan_images_total) + ' 张配对原图' : ''));
-        $('#btn-clean-orphans').hidden = false;
-      } else {
-        lines.push('✓ 没有未引用的展示图');
-      }
-      if (r.legacy_note) lines.push(r.legacy_note);
-      out.textContent = lines.join('；');
+      orphanItems = (r.orphan_images || []).map(function (key) {
+        return { key: key, url: '/api/img/' + key, name: key.slice('images/'.length) };
+      });
+      lastScanCleanText = '展示图 ' + r.images_total + ' 张，被引用 ' + r.referenced + ' 张；✓ 没有未引用的展示图';
+      lastLegacyNote = r.legacy_note || '';
+      renderOrphanGrid();
+      updateOrphanSummary();
     }).catch(function (err) { out.textContent = '扫描失败：' + err.message; });
   });
 
   $('#btn-clean-orphans').addEventListener('click', function () {
-    if (!confirm('确定清理未引用的图片吗？此操作不可恢复（在售/隐藏商品的图片不受影响）。')) return;
+    if (!orphanItems.length) return;
+    if (!confirm('确定清理全部 ' + orphanItems.length + ' 张未引用图片吗？此操作不可恢复（在售/隐藏商品的图片不受影响）。')) return;
     var out = $('#orphans-result');
     out.textContent = '清理中..';
-    api('DELETE', '/api/images/orphans', orphanKeys.length ? { keys: orphanKeys } : {}).then(function (r) {
+    var keys = [];
+    orphanItems.forEach(function (it) {
+      keys.push(it.key);
+      keys.push(it.key.replace(/^images\//, 'orig/'));
+    });
+    api('DELETE', '/api/images/orphans', { keys: keys }).then(function (r) {
+      orphanItems = [];
+      renderOrphanGrid();
       out.textContent = '已清理 ' + r.deleted + ' 个文件';
       $('#btn-clean-orphans').hidden = true;
-      orphanKeys = [];
     }).catch(function (err) { out.textContent = '清理失败：' + err.message; });
   });
+
 
   // ── 启动：探测会话 ─────────────────────
   fetch('/api/login', { method: 'GET' })
