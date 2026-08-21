@@ -218,7 +218,7 @@
     tab.addEventListener('click', function () {
       document.querySelectorAll('.subtab').forEach(function (t) { t.classList.remove('active'); });
       tab.classList.add('active');
-      ['products', 'categories', 'settings'].forEach(function (name) {
+      ['products', 'categories', 'images', 'settings'].forEach(function (name) {
         $('#pane-' + name).hidden = name !== tab.dataset.pane;
       });
     });
@@ -237,6 +237,8 @@
       renderProductList();
       renderCategoryList();
       fillSettingsForm(state.settings);
+      renderImagesPane();
+      api('GET', '/api/images/orphans').then(updateImgStats).catch(function () {});
     }).catch(function (err) { toast(err.message, true); });
   }
 
@@ -1319,6 +1321,96 @@
     }).catch(function (err) { toast(err.message, true); });
   });
 
+
+  // ── 图片管理：统计 + 按商品分组 + 原图下载 ──
+  function fileNameFromUrl(url) {
+    var m = String(url || '').match(/images\/([A-Za-z0-9._-]+)$/);
+    return m ? m[1] : null;
+  }
+
+  function renderImagesPane() {
+    var box = $('#image-groups');
+    box.textContent = '';
+
+    var groups = [];
+    state.products.forEach(function (p) {
+      var imgs = [];
+      var seen = {};
+      var push = function (url) {
+        var name = fileNameFromUrl(url);
+        if (!name || seen[name]) return;
+        seen[name] = 1;
+        imgs.push({ url: url, name: name });
+      };
+      push(p.image_url);
+      var md = String(p.description || '').match(/!\[[^\]]*\]\([^)\s]+\)/g) || [];
+      md.forEach(function (m2) {
+        var u = m2.match(/\(([^)\s]+)\)$/);
+        if (u) push(u[1]);
+      });
+      if (imgs.length) groups.push({ title: p.name, imgs: imgs });
+    });
+
+    var sImgs = [];
+    var sSeen = {};
+    [state.settings.favicon_url, state.settings.contact_img].forEach(function (url) {
+      var name = fileNameFromUrl(url);
+      if (name && !sSeen[name]) { sSeen[name] = 1; sImgs.push({ url: url, name: name }); }
+    });
+    if (sImgs.length) groups.push({ title: '站点图标 / 联系二维码', imgs: sImgs });
+
+    if (!groups.length) {
+      var empty = document.createElement('div');
+      empty.className = 'loading';
+      empty.textContent = '还没有图片，去商品管理上传吧';
+      box.appendChild(empty);
+      return;
+    }
+
+    groups.forEach(function (g) {
+      var head = document.createElement('div');
+      head.className = 'img-group-title';
+      head.textContent = g.title + '（' + g.imgs.length + ' 张）';
+      box.appendChild(head);
+
+      var grid = document.createElement('div');
+      grid.className = 'orphan-grid img-mgr-grid';
+      g.imgs.forEach(function (it) {
+        var cell = document.createElement('div');
+        cell.className = 'orphan-cell';
+
+        var img = document.createElement('img');
+        img.src = it.url;
+        img.alt = it.name;
+        img.loading = 'lazy';
+        cell.appendChild(img);
+
+        var name = document.createElement('div');
+        name.className = 'orphan-name';
+        name.textContent = it.name;
+        cell.appendChild(name);
+
+        var dl = document.createElement('a');
+        dl.className = 'btn btn-sm';
+        dl.textContent = '下载原图';
+        dl.href = '/api/orig/' + it.name;
+        cell.appendChild(dl);
+
+        grid.appendChild(cell);
+      });
+      box.appendChild(grid);
+    });
+  }
+
+  function updateImgStats(r) {
+    var el = $('#img-stats');
+    if (!el) return;
+    el.textContent = '展示图 ' + r.images_total + ' 张（被引用 ' + r.referenced + '）· '
+      + '原图 ' + (r.orig_total != null ? r.orig_total : '—') + ' 张 · '
+      + '未引用 ' + r.orphan_images_total + ' 张'
+      + (r.legacy_note ? '；' + r.legacy_note : '');
+  }
+
   // ── 孤儿图片扫描与清理（缩略图列表 + 单删/全删）──
   var orphanItems = []; // [{key, url, name}]
   var legacyOrphanKeys = []; // 旧格式残留原图 key
@@ -1475,6 +1567,7 @@
       renderOrphanGrid();
       renderLegacyList();
       updateOrphanSummary();
+      updateImgStats(r);
     }).catch(function (err) { out.textContent = '扫描失败：' + err.message; });
   });
 

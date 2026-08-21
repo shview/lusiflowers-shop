@@ -574,3 +574,13 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
   height: 18px;
   z-index: 2;
 }
+
+/* ── 图片管理：分组标题 ───────────────── */
+.img-group-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin: 16px 0 10px;
+}
+
+.img-mgr-grid .orphan-cell { cursor: default; }
+.img-mgr-grid .btn-sm { text-decoration: none; display: inline-block; }

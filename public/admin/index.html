@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=19">
+  <link rel="stylesheet" href="/admin/admin.css?v=20">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -44,6 +44,7 @@
       <div class="subtabs">
         <button class="subtab active" data-pane="products">商品管理</button>
         <button class="subtab" data-pane="categories">分类管理</button>
+        <button class="subtab" data-pane="images">图片管理</button>
         <button class="subtab" data-pane="settings">站点设置</button>
       </div>
 
@@ -175,7 +176,27 @@
         </div>
         <div class="card" style="padding: 16px 20px">
           <button type="button" class="btn btn-primary" id="btn-export">导出数据（JSON）</button>
-          <button type="button" class="btn" id="btn-scan-orphans" style="margin-left:8px">扫描未引用图片</button>
+          <div class="upload-hint" style="margin-top:8px">
+            导出全部商品、分类与设置为 JSON 文件留底。另外 D1 数据库自带「时间旅行」：
+            过去 30 天内任意时间点的数据都可在 Cloudflare 控制台一键恢复，无需额外备份。
+          </div>
+        </div>
+      </section>
+
+      <!-- 图片管理 -->
+      <section class="pane" id="pane-images" hidden>
+        <div class="pane-head">
+          <h3>图片管理</h3>
+        </div>
+        <div class="card" style="padding: 14px 20px; margin-bottom: 14px">
+          <div id="img-stats" class="upload-hint">统计加载中..</div>
+        </div>
+        <div id="image-groups"></div>
+        <div class="pane-head" style="margin-top:22px">
+          <h3>未引用图片</h3>
+        </div>
+        <div class="card" style="padding: 16px 20px">
+          <button type="button" class="btn" id="btn-scan-orphans">扫描未引用图片</button>
           <button type="button" class="btn btn-danger-ghost" id="btn-clean-orphans" style="margin-left:8px" hidden>清理</button>
           <button type="button" class="btn" id="btn-orphan-selall" style="margin-left:8px" hidden>全选</button>
           <button type="button" class="btn btn-danger-ghost" id="btn-orphan-delsel" style="margin-left:8px" hidden>删除选中 (0)</button>
@@ -183,8 +204,7 @@
           <div class="orphan-grid" id="orphan-grid"></div>
           <div class="orphan-legacy-list" id="orphan-legacy-list"></div>
           <div class="upload-hint" style="margin-top:8px">
-            导出全部商品、分类与设置为 JSON 文件留底。另外 D1 数据库自带「时间旅行」：
-            过去 30 天内任意时间点的数据都可在 Cloudflare 控制台一键恢复，无需额外备份。
+            上传后未保存、换图替换下来的图片会出现在这里，可复选批量清理。
           </div>
         </div>
       </section>
@@ -289,7 +309,7 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="/assets/md.js?v=19"></script>
-  <script src="/admin/admin.js?v=19"></script>
+  <script src="/assets/md.js?v=20"></script>
+  <script src="/admin/admin.js?v=20"></script>
 </body>
 </html>

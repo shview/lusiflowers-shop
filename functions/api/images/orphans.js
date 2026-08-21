@@ -58,7 +58,7 @@ async function scan(env) {
     else legacyOrphans.push(o.key);
   }
 
-  return { refs, imageItems, orphanImages, pairedOrphanOrigs, legacyPairs, legacyOrphans };
+  return { refs, imageItems, origItems, orphanImages, pairedOrphanOrigs, legacyPairs, legacyOrphans };
 }
 
 // GET：扫描并报告（不删除）
@@ -69,6 +69,7 @@ export async function onRequestGet(context) {
   return json({
     referenced: r.refs.size,
     images_total: r.imageItems.length,
+    orig_total: r.origItems.length,
     orphan_images_total: r.orphanImages.length,
     orphan_images: r.orphanImages,
     legacy_orphan_origs: r.legacyOrphans,
