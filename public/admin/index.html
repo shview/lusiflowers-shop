@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=20">
+  <link rel="stylesheet" href="/admin/admin.css?v=21">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -187,6 +187,12 @@
       <section class="pane" id="pane-images" hidden>
         <div class="pane-head">
           <h3>图片管理</h3>
+          <div class="pane-head-ops">
+            <input type="search" id="img-kw" class="input" style="width:140px" placeholder="搜索商品…" autocomplete="off">
+            <select id="img-cat" class="input" style="width:auto" title="按分类筛选">
+              <option value="all">全部分类</option>
+            </select>
+          </div>
         </div>
         <div class="card" style="padding: 14px 20px; margin-bottom: 14px">
           <div id="img-stats" class="upload-hint">统计加载中..</div>
@@ -309,7 +315,11 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="/assets/md.js?v=20"></script>
-  <script src="/admin/admin.js?v=20"></script>
+    <!-- 图片放大查看 -->
+  <div class="lb-mask" id="admin-lb" hidden>
+    <img id="admin-lb-img" alt="" draggable="false">
+  </div>
+  <script src="/assets/md.js?v=21"></script>
+  <script src="/admin/admin.js?v=21"></script>
 </body>
 </html>

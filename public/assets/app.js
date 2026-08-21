@@ -185,7 +185,14 @@
 
       var img = node.querySelector('img');
       if (p.image_url) {
-        img.src = p.image_url;
+        // 卡片优先加载缩略图（省流量），无缩略图的存量图自动回退大图
+        var full = new URL(p.image_url, location.href).href;
+        var thumb = full.replace(/\/images\/([^/?#]+)$/, '/thumb/$1');
+        img.dataset.full = full;
+        img.onerror = function () {
+          if (img.getAttribute('src') !== full) img.src = full;
+        };
+        img.src = thumb;
         img.alt = p.name;
       } else {
         img.remove();

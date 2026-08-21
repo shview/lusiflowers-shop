@@ -118,7 +118,9 @@ export async function onRequestPost(context) {
     const refs = await referencedKeys(env);
     const doomed = wanted.filter(k => !refs.has(k));
     const all = [];
-    doomed.forEach(k => { all.push(k, k.replace(/^images\//, 'orig/')); });
+    doomed.forEach(k => {
+      all.push(k, k.replace(/^images\//, 'orig/'), k.replace(/^images\//, 'thumb/'));
+    });
     if (all.length) await Promise.allSettled(all.map(k => env.BUCKET.delete(k)));
     return json({ ok: true, deleted: doomed.length, kept: wanted.length - doomed.length });
   }
@@ -134,11 +136,15 @@ export async function onRequestDelete(context) {
   let doomed;
   if (body && Array.isArray(body.keys) && body.keys.length) {
     doomed = body.keys.filter(k =>
-      (/^images\/[A-Za-z0-9._-]+$/.test(k) || /^orig\/[A-Za-z0-9._-]+$/.test(k)) && !k.includes('..')
+      (/^images\/[A-Za-z0-9._-]+$/.test(k) || /^orig\/[A-Za-z0-9._-]+$/.test(k) || /^thumb\/[A-Za-z0-9._-]+$/.test(k)) && !k.includes('..')
     );
   } else {
     const r = await scan(env);
-    doomed = r.orphanImages.concat(r.pairedOrphanOrigs, r.legacyOrphans);
+    doomed = [];
+    r.orphanImages.forEach(k => {
+      doomed.push(k, k.replace(/^images\//, 'orig/'), k.replace(/^images\//, 'thumb/'));
+    });
+    doomed = doomed.concat(r.pairedOrphanOrigs, r.legacyOrphans);
   }
 
   if (!doomed.length) return json({ ok: true, deleted: 0 });

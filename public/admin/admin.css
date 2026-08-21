@@ -584,3 +584,23 @@ html[data-theme="dark"] .prow-badge.soldout-badge {
 
 .img-mgr-grid .orphan-cell { cursor: default; }
 .img-mgr-grid .btn-sm { text-decoration: none; display: inline-block; }
+
+/* ── 图片管理：单元格操作行 + 灯箱 ────── */
+.img-cell-ops { display: flex; gap: 6px; justify-content: center; }
+
+.lb-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+
+.lb-mask img {
+  max-width: 92vw;
+  max-height: 88vh;
+  object-fit: contain;
+}

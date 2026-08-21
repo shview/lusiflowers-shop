@@ -98,8 +98,9 @@ export async function onRequestDelete(context) {
       // 仍被其他商品引用的图片保留，避免误删共用图
       if (!(await isReferencedElsewhere(env, key, id))) {
         doomed.add(key);
-        // 对应的私有原图（水印模式下另存的 orig/ 前缀）一并清理
+        // 对应的私有原图与公开缩略图（同名配对）一并清理
         doomed.add(key.replace(/^images\//, 'orig/'));
+        doomed.add(key.replace(/^images\//, 'thumb/'));
       }
     }
     // 尽力而为：清理失败不影响商品删除结果，仅留下孤儿文件

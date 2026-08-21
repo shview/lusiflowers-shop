@@ -60,7 +60,8 @@ export async function onRequestPut(context) {
       const oldKeys = [...imgKeysFromUrls([oldV])];
       if (!oldKeys.length || !env.BUCKET) continue;
       const refs = await referencedKeys(env);
-      const doomed = oldKeys.flatMap(k => !refs.has(k) ? [k, k.replace(/^images\//, 'orig/')] : []);
+      const doomed = oldKeys.flatMap(k => !refs.has(k)
+        ? [k, k.replace(/^images\//, 'orig/'), k.replace(/^images\//, 'thumb/')] : []);
       if (doomed.length) await Promise.allSettled(doomed.map(k => env.BUCKET.delete(k)));
     }
   } catch (e) { console.error('replace image recycle failed:', e.message); }

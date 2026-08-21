@@ -3,6 +3,7 @@ import { json } from '../_lib/auth.js';
 // POST /api/upload  multipart/form-data
 //   file: 展示用图片（后台已合成水印时即为带水印版本）
 //   orig: 可选，原图（存私有前缀 orig/，不对外提供访问）
+//   thumb: 可选，缩略图（存公开前缀 thumb/，供卡片/网格使用，与展示图同名）
 // 文件名 = 内容 SHA-256 前 16 位：同一张图无论传几次都得到同一个地址，天然去重省存储
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED = {
@@ -57,6 +58,17 @@ export async function onRequestPost(context) {
         });
         origSaved = true;
       }
+    }
+  }
+
+  // 缩略图另存公开前缀（与展示图同名，卡片/网格加载小图省流量）
+  const thumb = form?.get('thumb');
+  if (thumb && typeof thumb !== 'string' && /^image\//.test(thumb.type)) {
+    const tCheck = checkImage(thumb);
+    if (!tCheck.error) {
+      await env.BUCKET.put(`thumb/${hash}.${tCheck.ext}`, await thumb.arrayBuffer(), {
+        httpMetadata: { contentType: thumb.type, cacheControl: 'public, max-age=31536000, immutable' },
+      });
     }
   }
 

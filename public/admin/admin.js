@@ -793,6 +793,24 @@
       }
     }
 
+    // 缩略图：展示图缩到 400px（GIF 跳过；本身就是小图时直接用展示图）
+    var thumbBlob = null;
+    if (/^image\/(jpeg|png|webp|avif)$/.test(displayFile.type)) {
+      try {
+        thumbBlob = await compressImage(displayFile, 400);
+        if (!thumbBlob && displayFile.size <= 300 * 1024) thumbBlob = displayFile;
+      } catch (e) { thumbBlob = null; }
+    }
+
+    var withThumb = function (form) {
+      if (thumbBlob) {
+        form.append('thumb', thumbBlob instanceof File
+          ? thumbBlob
+          : new File([thumbBlob], 't.jpg', { type: 'image/jpeg' }));
+      }
+      return form;
+    };
+
     if (wmOn && /^image\/(jpeg|png|webp|avif)$/.test(displayFile.type)) {
       try {
         var blob = await compositeWatermark(displayFile, text);
@@ -801,7 +819,7 @@
           form.append('file', new File([blob], 'wm.jpg', { type: 'image/jpeg' }));
           // 原图：水印开启时始终另存完整原图（含未压缩版本）
           form.append('orig', file, file.name || 'orig');
-          return api('POST', '/api/upload', form, true);
+          return api('POST', '/api/upload', withThumb(form), true);
         }
       } catch (e) {
         console.error('水印合成失败，回退原图上传', e);
@@ -810,7 +828,7 @@
 
     var form = new FormData();
     form.append('file', displayFile);
-    return api('POST', '/api/upload', form, true);
+    return api('POST', '/api/upload', withThumb(form), true);
   }
 
   // 若光标处于某个 ![...](...) / [...](...) 记号内部，返回该记号结束后的安全插入位置
@@ -1322,25 +1340,111 @@
   });
 
 
-  // ── 图片管理：统计 + 按商品分组 + 原图下载 ──
+  // ── 图片管理：筛选 + 分组浏览 + 放大 + 原图下载 + 删除引用 ──
+  var imgKw = '';
+  var imgCat = 'all';
+
   function fileNameFromUrl(url) {
     var m = String(url || '').match(/images\/([A-Za-z0-9._-]+)$/);
     return m ? m[1] : null;
   }
 
+  function escapeReg(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  // 管理端灯箱
+  function adminLightbox(src) {
+    var lb = $('#admin-lb');
+    $('#admin-lb-img').src = src;
+    lb.hidden = false;
+  }
+  $('#admin-lb').addEventListener('click', function () { this.hidden = true; });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') $('#admin-lb').hidden = true;
+  });
+
+  // 删除引用：从商品主图/描述（或站点设置）移除；若无其他引用则连文件一起删
+  function removeImageRef(it, product, field) {
+    var key = it.key; // images/<name>
+    var url = '/api/img/' + key;
+    var msg = product
+      ? '从「' + product.name + '」移除这张图片？\n若没有其他商品/设置在使用它，文件将一并删除。'
+      : '移除站点' + (field === 'favicon_url' ? '图标' : '联系二维码') + '？\n若没有其他地方在使用它，文件将一并删除。';
+    if (!confirm(msg)) return;
+
+    var done = function () {
+      // 服务端复核引用，无引用则删文件（含原图/缩略图）
+      api('POST', '/api/images/orphans', { keys: [key] })
+        .then(function (r) {
+          toast(r.deleted > 0 ? '已移除引用并删除文件' : '已移除引用（文件仍被其他地方使用）');
+          loadAll();
+        })
+        .catch(function (err) { toast(err.message, true); loadAll(); });
+    };
+
+    if (product) {
+      var payload = {};
+      if (product.image_url && fileNameFromUrl(product.image_url) === it.name) payload.image_url = '';
+      var desc = String(product.description || '');
+      var re = new RegExp('\\n*!\\[[^\\]]*\\]\\(' + escapeReg(url) + '\\)', 'g');
+      var nd = desc.replace(re, '');
+      if (nd !== desc) payload.description = nd;
+      if (payload.image_url === undefined && payload.description === undefined) {
+        toast('该图未在此商品中引用');
+        return;
+      }
+      api('PUT', '/api/products/' + product.id, payload).then(done)
+        .catch(function (err) { toast(err.message, true); });
+    } else {
+      var body = {};
+      body[field] = '';
+      // 设置 PUT 自带旧图回收逻辑（无引用时删文件），无需再调 orphans
+      api('PUT', '/api/settings', body)
+        .then(function () {
+          toast('已移除并回收');
+          loadAll();
+        })
+        .catch(function (err) { toast(err.message, true); });
+    }
+  }
+
+  function fillImgCatSelect() {
+    var sel = $('#img-cat');
+    var cur = imgCat;
+    sel.textContent = '';
+    var optAll = document.createElement('option');
+    optAll.value = 'all';
+    optAll.textContent = '全部分类';
+    sel.appendChild(optAll);
+    state.categories.forEach(function (c) {
+      var opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+    sel.value = String(cur);
+    if (sel.value !== String(cur)) { imgCat = 'all'; sel.value = 'all'; }
+  }
+
   function renderImagesPane() {
+    fillImgCatSelect();
     var box = $('#image-groups');
     box.textContent = '';
 
+    var kw = imgKw.toLowerCase();
     var groups = [];
     state.products.forEach(function (p) {
+      if (imgCat !== 'all' && String(p.category_id) !== String(imgCat)) return;
+      if (kw && ((p.name || '') + '\n' + (p.description || '')).toLowerCase().indexOf(kw) === -1) return;
+
       var imgs = [];
       var seen = {};
       var push = function (url) {
         var name = fileNameFromUrl(url);
         if (!name || seen[name]) return;
         seen[name] = 1;
-        imgs.push({ url: url, name: name });
+        imgs.push({ key: 'images/' + name, url: url, name: name });
       };
       push(p.image_url);
       var md = String(p.description || '').match(/!\[[^\]]*\]\([^)\s]+\)/g) || [];
@@ -1348,21 +1452,27 @@
         var u = m2.match(/\(([^)\s]+)\)$/);
         if (u) push(u[1]);
       });
-      if (imgs.length) groups.push({ title: p.name, imgs: imgs });
+      if (imgs.length) groups.push({ title: p.name, product: p, imgs: imgs });
     });
 
-    var sImgs = [];
-    var sSeen = {};
-    [state.settings.favicon_url, state.settings.contact_img].forEach(function (url) {
-      var name = fileNameFromUrl(url);
-      if (name && !sSeen[name]) { sSeen[name] = 1; sImgs.push({ url: url, name: name }); }
-    });
-    if (sImgs.length) groups.push({ title: '站点图标 / 联系二维码', imgs: sImgs });
+    // 站点图标 / 二维码组（仅在无筛选时显示）
+    if (imgCat === 'all' && !imgKw) {
+      var sImgs = [];
+      var sSeen = {};
+      [['favicon_url', state.settings.favicon_url], ['contact_img', state.settings.contact_img]].forEach(function (pair) {
+        var name = fileNameFromUrl(pair[1]);
+        if (name && !sSeen[name]) {
+          sSeen[name] = 1;
+          sImgs.push({ key: 'images/' + name, url: pair[1], name: name, field: pair[0] });
+        }
+      });
+      if (sImgs.length) groups.push({ title: '站点图标 / 联系二维码', product: null, imgs: sImgs });
+    }
 
     if (!groups.length) {
       var empty = document.createElement('div');
       empty.className = 'loading';
-      empty.textContent = '还没有图片，去商品管理上传吧';
+      empty.textContent = imgKw || imgCat !== 'all' ? '没有匹配的图片' : '还没有图片，去商品管理上传吧';
       box.appendChild(empty);
       return;
     }
@@ -1379,10 +1489,15 @@
         var cell = document.createElement('div');
         cell.className = 'orphan-cell';
 
+        // 缩略图（无则回退大图），点击放大
         var img = document.createElement('img');
-        img.src = it.url;
+        var full = new URL(it.url, location.href).href;
+        img.src = full.replace(/\/images\/([^/?#]+)$/, '/thumb/$1');
+        img.onerror = function () { if (img.getAttribute('src') !== full) img.src = full; };
         img.alt = it.name;
         img.loading = 'lazy';
+        img.style.cursor = 'zoom-in';
+        img.addEventListener('click', function (e) { e.stopPropagation(); adminLightbox(full); });
         cell.appendChild(img);
 
         var name = document.createElement('div');
@@ -1390,17 +1505,37 @@
         name.textContent = it.name;
         cell.appendChild(name);
 
+        var ops = document.createElement('div');
+        ops.className = 'img-cell-ops';
+
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'btn btn-sm btn-danger-ghost';
+        del.textContent = '删除';
+        del.addEventListener('click', function (e) { e.stopPropagation(); removeImageRef(it, g.product, it.field); });
+        ops.appendChild(del);
+
         var dl = document.createElement('a');
         dl.className = 'btn btn-sm';
         dl.textContent = '下载原图';
         dl.href = '/api/orig/' + it.name;
-        cell.appendChild(dl);
+        ops.appendChild(dl);
 
+        cell.appendChild(ops);
         grid.appendChild(cell);
       });
       box.appendChild(grid);
     });
   }
+
+  $('#img-kw').addEventListener('input', function () {
+    imgKw = this.value.trim();
+    renderImagesPane();
+  });
+  $('#img-cat').addEventListener('change', function () {
+    imgCat = this.value;
+    renderImagesPane();
+  });
 
   function updateImgStats(r) {
     var el = $('#img-stats');
