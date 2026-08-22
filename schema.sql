@@ -30,4 +30,5 @@ INSERT OR IGNORE INTO settings (key, value) VALUES ('announcement', '欢迎光�
 INSERT OR IGNORE INTO settings (key, value) VALUES ('watermark_on', '1');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('og_on', '0');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('compress_on', '0');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('undo_on', '1');
 INSERT OR IGNORE INTO categories (name, sort) VALUES ('推荐', 0);

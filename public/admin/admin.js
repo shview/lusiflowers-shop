@@ -112,6 +112,14 @@
   // ── 删除撤销（30 秒窗口）──
   var undoTimers = {};
   function deleteWithUndo(p) {
+    var undoOn = state.settings.undo_on !== '0';
+    if (!undoOn) {
+      if (!confirm('确定删除商品「' + p.name + '」吗？此操作不可恢复。')) return;
+      api('DELETE', '/api/products/' + p.id)
+        .then(function () { toast('已删除'); loadAll(); })
+        .catch(function (err) { toast(err.message, true); });
+      return;
+    }
     if (!confirm('确定删除商品「' + p.name + '」吗？30 秒内可撤销。')) return;
     var wasVisible = !!p.visible;
     api('DELETE', '/api/products/' + p.id).then(function () {
@@ -1520,6 +1528,7 @@
     $('#set-announcement').value = settings.announcement || '';
     $('#set-watermark').checked = settings.watermark_on !== '0';
     $('#set-compress').checked = settings.compress_on === '1';
+    $('#set-undo').checked = settings.undo_on !== '0';
     $('#set-og').checked = settings.og_on === '1';
     $('#set-contact-on').checked = settings.contact_on === '1';
     $('#set-contact-text').value = settings.contact_text || '';
@@ -1605,6 +1614,7 @@
       announcement: $('#set-announcement').value,
       watermark_on: $('#set-watermark').checked ? '1' : '0',
       compress_on: $('#set-compress').checked ? '1' : '0',
+      undo_on: $('#set-undo').checked ? '1' : '0',
       og_on: $('#set-og').checked ? '1' : '0',
       view_protect: $('#set-view-protect').checked ? '1' : '0',
       view_password: $('#set-view-password').value.trim(),
@@ -1617,6 +1627,7 @@
       // 同步到本会话状态，立即影响后续上传
       state.settings.watermark_on = $('#set-watermark').checked ? '1' : '0';
       state.settings.compress_on = $('#set-compress').checked ? '1' : '0';
+      state.settings.undo_on = $('#set-undo').checked ? '1' : '0';
       state.settings.site_name = $('#set-site-name').value.trim();
       state.settings.home_title = $('#set-home-title').value.trim();
       state.settings.favicon_url = faviconUrl;

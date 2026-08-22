@@ -14,7 +14,7 @@
       } catch (e) { /* 忽略 */ }
     })();
   </script>
-  <link rel="stylesheet" href="/admin/admin.css?v=26">
+  <link rel="stylesheet" href="/admin/admin.css?v=27">
 </head>
 <body>
   <!-- 登录视图 -->
@@ -128,6 +128,10 @@
           <label class="field check-field">
             <input type="checkbox" id="set-compress">
             <span>上传自动压图：大图自动缩到 1500px 内再上传（前台加载更快、更省空间；水印开启时完整原图仍会另存）</span>
+          </label>
+          <label class="field check-field">
+            <input type="checkbox" id="set-undo" checked>
+            <span>删除撤销：删除商品后保留 30 秒撤销窗口（关闭则直接删除）</span>
           </label>
           <label class="field check-field">
             <input type="checkbox" id="set-og">
@@ -338,7 +342,7 @@
   <div class="lb-mask" id="admin-lb" hidden>
     <img id="admin-lb-img" alt="" draggable="false">
   </div>
-  <script src="/assets/md.js?v=26"></script>
-  <script src="/admin/admin.js?v=26"></script>
+  <script src="/assets/md.js?v=27"></script>
+  <script src="/admin/admin.js?v=27"></script>
 </body>
 </html>

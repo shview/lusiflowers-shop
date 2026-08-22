@@ -30,7 +30,8 @@ export async function onRequestPut(context) {
 
   const allowed = ['site_name', 'home_title', 'favicon_url', 'announcement', 'watermark_on', 'og_on',
                    'view_protect', 'view_password', 'view_pw_hours', 'compress_on',
-                   'contact_on', 'contact_img', 'contact_text', 'contact_link'];
+                   'contact_on', 'contact_img', 'contact_text', 'contact_link',
+                   'undo_on'];
 
   // 记录图标/二维码的旧值，保存后用于回收被替换的图片
   const oldImg = { favicon_url: '', contact_img: '' };
